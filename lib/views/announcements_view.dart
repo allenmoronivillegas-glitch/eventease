@@ -38,25 +38,28 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Announcements & Notifications',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimary,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Broadcasts',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Broadcast urgent updates, schedule changes, and logistical announcements.',
-                    style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      'Instantly update your attendees.',
+                      style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                    ),
+                  ],
+                ),
               ),
-              ElevatedButton.icon(
+              const SizedBox(width: 12),
+              ElevatedButton(
                 onPressed: () {
                   showDialog(
                     context: context,
@@ -69,8 +72,7 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
                     ),
                   );
                 },
-                icon: const Icon(Icons.campaign_rounded, size: 18),
-                label: const Text('New Broadcast'),
+                child: const Icon(Icons.campaign_rounded, size: 20),
               ),
             ],
           ),
@@ -88,11 +90,6 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
               children: [
                 const Icon(Icons.filter_list_rounded,
                     color: AppTheme.textSecondary, size: 20),
-                const SizedBox(width: 12),
-                const Text(
-                  'Filter by Event:',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: DropdownButton<String>(
@@ -131,11 +128,8 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
                 children: [
                   Icon(Icons.campaign_outlined, size: 50, color: AppTheme.textMuted),
                   const SizedBox(height: 12),
-                  const Text('No announcements found',
+                  const Text('No broadcasts found.',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  const Text('Broadcast an update to attendees.',
-                      style: TextStyle(color: AppTheme.textSecondary)),
                 ],
               ),
             )
@@ -176,10 +170,13 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        spacing: 12,
+                        runSpacing: 8,
                         children: [
                           Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -205,27 +202,12 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.background,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.people_alt_outlined,
-                                        size: 13, color: AppTheme.textSecondary),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Target: ${ann.sentTo}',
-                                      style: const TextStyle(
-                                          fontSize: 12,
-                                          color: AppTheme.textSecondary),
-                                    ),
-                                  ],
-                                ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Target: ${ann.sentTo}',
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppTheme.textSecondary),
                               ),
                             ],
                           ),
@@ -259,12 +241,15 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
                         children: [
                           const Icon(Icons.event, size: 14, color: AppTheme.textMuted),
                           const SizedBox(width: 6),
-                          Text(
-                            event?.title ?? 'General Announcement',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.textSecondary,
-                              fontWeight: FontWeight.w500,
+                          Expanded(
+                            child: Text(
+                              event?.title ?? 'General Announcement',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.textSecondary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],

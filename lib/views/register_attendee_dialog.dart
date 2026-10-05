@@ -126,7 +126,7 @@ class _RegisterAttendeeDialogState extends State<RegisterAttendeeDialog> {
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
-                  initialValue: _selectedEventId.isNotEmpty ? _selectedEventId : null,
+                  value: _selectedEventId.isNotEmpty ? _selectedEventId : null,
                   items: widget.events
                       .map((e) => DropdownMenuItem(
                             value: e.id,
@@ -152,54 +152,70 @@ class _RegisterAttendeeDialogState extends State<RegisterAttendeeDialog> {
                       v == null || v.isEmpty ? 'Attendee name is required' : null,
                 ),
                 const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Email Address *',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w600, fontSize: 13)),
-                          const SizedBox(height: 6),
-                          TextFormField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: const InputDecoration(
-                              hintText: 'name@company.com',
-                              prefixIcon: Icon(Icons.email_outlined, size: 18),
-                            ),
-                            validator: (v) =>
-                                v == null || !v.contains('@') ? 'Valid email required' : null,
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final bool isNarrow = constraints.maxWidth < 400;
+                    final emailField = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Email Address *',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 13)),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: const InputDecoration(
+                            hintText: 'name@company.com',
+                            prefixIcon: Icon(Icons.email_outlined, size: 18),
                           ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                          validator: (v) =>
+                              v == null || !v.contains('@') ? 'Valid email required' : null,
+                        ),
+                      ],
+                    );
+
+                    final ticketField = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Ticket Pass',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 13)),
+                        const SizedBox(height: 6),
+                        DropdownButtonFormField<String>(
+                          value: _selectedTicket,
+                          items: _ticketTypes
+                              .map((t) => DropdownMenuItem(
+                                    value: t,
+                                    child: Text(t),
+                                  ))
+                              .toList(),
+                          onChanged: (val) =>
+                              setState(() => _selectedTicket = val!),
+                          decoration: const InputDecoration(),
+                        ),
+                      ],
+                    );
+
+                    if (isNarrow) {
+                      return Column(
                         children: [
-                          const Text('Ticket Pass',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w600, fontSize: 13)),
-                          const SizedBox(height: 6),
-                          DropdownButtonFormField<String>(
-                            initialValue: _selectedTicket,
-                            items: _ticketTypes
-                                .map((t) => DropdownMenuItem(
-                                      value: t,
-                                      child: Text(t),
-                                    ))
-                                .toList(),
-                            onChanged: (val) =>
-                                setState(() => _selectedTicket = val!),
-                            decoration: const InputDecoration(),
-                          ),
+                          emailField,
+                          const SizedBox(height: 16),
+                          ticketField,
                         ],
-                      ),
-                    ),
-                  ],
+                      );
+                    }
+
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: emailField),
+                        const SizedBox(width: 14),
+                        Expanded(child: ticketField),
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 16),
                 const Text('Contact Phone',

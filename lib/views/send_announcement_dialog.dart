@@ -130,7 +130,7 @@ class _SendAnnouncementDialogState extends State<SendAnnouncementDialog> {
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
-                  initialValue: _selectedEventId.isNotEmpty ? _selectedEventId : null,
+                  value: _selectedEventId.isNotEmpty ? _selectedEventId : null,
                   items: widget.events
                       .map((e) => DropdownMenuItem(
                             value: e.id,
@@ -143,55 +143,69 @@ class _SendAnnouncementDialogState extends State<SendAnnouncementDialog> {
                   decoration: const InputDecoration(),
                 ),
                 const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final bool isNarrow = constraints.maxWidth < 400;
+                    final targetField = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Audience Target',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 13)),
+                        const SizedBox(height: 6),
+                        DropdownButtonFormField<String>(
+                          value: _recipientGroup,
+                          items: _audiences
+                              .map((a) => DropdownMenuItem(
+                                    value: a,
+                                    child: Text(a),
+                                  ))
+                              .toList(),
+                          onChanged: (val) =>
+                              setState(() => _recipientGroup = val!),
+                          decoration: const InputDecoration(),
+                        ),
+                      ],
+                    );
+
+                    final priorityField = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Priority Level',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 13)),
+                        const SizedBox(height: 6),
+                        DropdownButtonFormField<String>(
+                          value: _priority,
+                          items: _priorities
+                              .map((p) => DropdownMenuItem(
+                                    value: p,
+                                    child: Text(p),
+                                  ))
+                              .toList(),
+                          onChanged: (val) => setState(() => _priority = val!),
+                          decoration: const InputDecoration(),
+                        ),
+                      ],
+                    );
+
+                    if (isNarrow) {
+                      return Column(
                         children: [
-                          const Text('Audience Target',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w600, fontSize: 13)),
-                          const SizedBox(height: 6),
-                          DropdownButtonFormField<String>(
-                            initialValue: _recipientGroup,
-                            items: _audiences
-                                .map((a) => DropdownMenuItem(
-                                      value: a,
-                                      child: Text(a),
-                                    ))
-                                .toList(),
-                            onChanged: (val) =>
-                                setState(() => _recipientGroup = val!),
-                            decoration: const InputDecoration(),
-                          ),
+                          targetField,
+                          const SizedBox(height: 16),
+                          priorityField,
                         ],
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Priority Level',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w600, fontSize: 13)),
-                          const SizedBox(height: 6),
-                          DropdownButtonFormField<String>(
-                            initialValue: _priority,
-                            items: _priorities
-                                .map((p) => DropdownMenuItem(
-                                      value: p,
-                                      child: Text(p),
-                                    ))
-                                .toList(),
-                            onChanged: (val) => setState(() => _priority = val!),
-                            decoration: const InputDecoration(),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                      );
+                    }
+                    return Row(
+                      children: [
+                        Expanded(child: targetField),
+                        const SizedBox(width: 14),
+                        Expanded(child: priorityField),
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 16),
                 const Text('Headline / Title *',

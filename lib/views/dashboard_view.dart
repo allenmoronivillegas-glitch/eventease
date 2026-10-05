@@ -15,6 +15,7 @@ class DashboardView extends StatelessWidget {
   final Function(int) onNavigateToTab;
   final Function(EventItem) onEventCreated;
   final Function(AttendeeItem) onAttendeeRegistered;
+  final Function(AttendeeItem) onAttendeeCheckInToggled;
   final Function(AnnouncementItem) onAnnouncementSent;
   final VoidCallback onDataChanged;
 
@@ -27,6 +28,7 @@ class DashboardView extends StatelessWidget {
     required this.onNavigateToTab,
     required this.onEventCreated,
     required this.onAttendeeRegistered,
+    required this.onAttendeeCheckInToggled,
     required this.onAnnouncementSent,
     required this.onDataChanged,
   });
@@ -47,58 +49,48 @@ class DashboardView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Welcome Header with Quick Action
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final bool isNarrow = constraints.maxWidth < 650;
+              return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Organizer Dashboard',
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Welcome back! Here is what is happening across your events today.',
-                    style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
-                  ),
-                ],
-              ),
-              Wrap(
-                spacing: 12,
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (ctx) => RegisterAttendeeDialog(
-                          events: events,
-                          onAttendeeRegistered: onAttendeeRegistered,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Organizer Dashboard',
+                              style: TextStyle(
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Welcome back! Here is what is happening across your events today.',
+                              style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                            ),
+                          ],
                         ),
-                      );
-                    },
-                    icon: const Icon(Icons.person_add_outlined, size: 18),
-                    label: const Text('Register Attendee'),
+                      ),
+                      if (!isNarrow) ...[
+                        const SizedBox(width: 16),
+                        _buildHeaderActions(context),
+                      ],
+                    ],
                   ),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (ctx) => CreateEventDialog(
-                          onEventCreated: onEventCreated,
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.add_rounded, size: 18),
-                    label: const Text('New Event'),
-                  ),
+                  if (isNarrow) ...[
+                    const SizedBox(height: 16),
+                    _buildHeaderActions(context),
+                  ],
                 ],
-              ),
-            ],
+              );
+            },
           ),
           const SizedBox(height: 24),
 
@@ -113,7 +105,7 @@ class DashboardView extends StatelessWidget {
                 mainAxisSpacing: 16,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                childAspectRatio: 2.2,
+                childAspectRatio: width > 600 ? 2.2 : 2.0,
                 children: [
                   StatCard(
                     title: 'TOTAL EVENTS',
@@ -166,56 +158,62 @@ class DashboardView extends StatelessWidget {
               ),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.bolt_rounded,
-                      color: Colors.white, size: 28),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Live Event Mode is Active',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final bool isNarrow = constraints.maxWidth < 550;
+                final mainContent = Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Fast badge scanning and urgent announcement dispatching are ready to use.',
-                        style: TextStyle(color: Colors.white70, fontSize: 13),
+                      child: const Icon(Icons.bolt_rounded,
+                          color: Colors.white, size: 28),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'Live Event Mode is Active',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Fast badge scanning and urgent announcement dispatching are ready.',
+                            style: TextStyle(color: Colors.white70, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (!isNarrow) ...[
+                      const SizedBox(width: 16),
+                      _buildBannerButton(context),
+                    ],
+                  ],
+                );
+
+                if (isNarrow) {
+                  return Column(
+                    children: [
+                      mainContent,
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: _buildBannerButton(context),
                       ),
                     ],
-                  ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => SendAnnouncementDialog(
-                        events: events,
-                        onAnnouncementSent: onAnnouncementSent,
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: AppTheme.primaryDark,
-                  ),
-                  icon: const Icon(Icons.campaign, size: 18),
-                  label: const Text('Broadcast Alert'),
-                ),
-              ],
+                  );
+                }
+                return mainContent;
+              },
             ),
           ),
           const SizedBox(height: 32),
@@ -245,6 +243,60 @@ class DashboardView extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildHeaderActions(BuildContext context) {
+    return Wrap(
+      spacing: 12,
+      runSpacing: 8,
+      children: [
+        OutlinedButton.icon(
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (ctx) => RegisterAttendeeDialog(
+                events: events,
+                onAttendeeRegistered: onAttendeeRegistered,
+              ),
+            );
+          },
+          icon: const Icon(Icons.person_add_outlined, size: 18),
+          label: const Text('Register Attendee'),
+        ),
+        ElevatedButton.icon(
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (ctx) => CreateEventDialog(
+                onEventCreated: onEventCreated,
+              ),
+            );
+          },
+          icon: const Icon(Icons.add_rounded, size: 18),
+          label: const Text('New Event'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBannerButton(BuildContext context) {
+    return ElevatedButton.icon(
+      onPressed: () {
+        showDialog(
+          context: context,
+          builder: (ctx) => SendAnnouncementDialog(
+            events: events,
+            onAnnouncementSent: onAnnouncementSent,
+          ),
+        );
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.white,
+        foregroundColor: AppTheme.primaryDark,
+      ),
+      icon: const Icon(Icons.campaign, size: 18),
+      label: const Text('Broadcast Alert'),
     );
   }
 
@@ -352,7 +404,9 @@ class DashboardView extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 8),
-                          Row(
+                          Wrap(
+                            spacing: 16,
+                            runSpacing: 4,
                             children: [
                               Text(
                                 '${event.registeredCount}/${event.totalCapacity} Attendees',
@@ -362,7 +416,6 @@ class DashboardView extends StatelessWidget {
                                   color: AppTheme.primary,
                                 ),
                               ),
-                              const SizedBox(width: 16),
                               Text(
                                 '${event.checkedInCount} Checked In',
                                 style: const TextStyle(
@@ -381,10 +434,13 @@ class DashboardView extends StatelessWidget {
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) => EventDetailsView(
-                              event: event,
+                              eventId: event.id,
+                              events: events,
                               attendees: attendees,
                               schedules: schedules,
                               announcements: announcements,
+                              onAttendeeRegistered: onAttendeeRegistered,
+                              onAttendeeCheckInToggled: onAttendeeCheckInToggled,
                               onDataChanged: onDataChanged,
                             ),
                           ),

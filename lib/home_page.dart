@@ -63,6 +63,33 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  void _onAttendeeCheckInToggled(AttendeeItem attendee) {
+    setState(() {
+      attendee.isCheckedIn = !attendee.isCheckedIn;
+      final increment = attendee.isCheckedIn ? 1 : -1;
+      final index = _events.indexWhere((e) => e.id == attendee.eventId);
+      if (index != -1) {
+        final ev = _events[index];
+        _events[index] = EventItem(
+          id: ev.id,
+          title: ev.title,
+          description: ev.description,
+          category: ev.category,
+          date: ev.date,
+          time: ev.time,
+          location: ev.location,
+          isVirtual: ev.isVirtual,
+          totalCapacity: ev.totalCapacity,
+          registeredCount: ev.registeredCount,
+          checkedInCount: ev.checkedInCount + increment,
+          ticketPrice: ev.ticketPrice,
+          bannerImageUrl: ev.bannerImageUrl,
+          status: ev.status,
+        );
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = [
@@ -74,6 +101,7 @@ class _HomePageState extends State<HomePage> {
         onNavigateToTab: (idx) => setState(() => _selectedIndex = idx),
         onEventCreated: _onEventCreated,
         onAttendeeRegistered: _onAttendeeRegistered,
+        onAttendeeCheckInToggled: _onAttendeeCheckInToggled,
         onAnnouncementSent: _onAnnouncementSent,
         onDataChanged: () => setState(() {}),
       ),
@@ -83,12 +111,15 @@ class _HomePageState extends State<HomePage> {
         schedules: _schedules,
         announcements: _announcements,
         onEventCreated: _onEventCreated,
+        onAttendeeRegistered: _onAttendeeRegistered,
+        onAttendeeCheckInToggled: _onAttendeeCheckInToggled,
         onDataChanged: () => setState(() {}),
       ),
       AttendeesView(
         attendees: _attendees,
         events: _events,
         onAttendeeRegistered: _onAttendeeRegistered,
+        onAttendeeCheckInToggled: _onAttendeeCheckInToggled,
         onDataChanged: () => setState(() {}),
       ),
       ScheduleView(
@@ -376,35 +407,41 @@ class _HomePageState extends State<HomePage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Left breadcrumb / page title indicator
-          Row(
-            children: [
-              Text(
-                _getSectionTitle(_selectedIndex),
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppTheme.successLight,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.fiber_manual_record, color: AppTheme.success, size: 10),
-                    SizedBox(width: 4),
-                    Text(
-                      'Live Portal',
-                      style: TextStyle(fontSize: 11, color: AppTheme.success, fontWeight: FontWeight.bold),
+          Expanded(
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    _getSectionTitle(_selectedIndex),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
                     ),
-                  ],
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppTheme.successLight,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.fiber_manual_record, color: AppTheme.success, size: 10),
+                      SizedBox(width: 4),
+                      Text(
+                        'Live',
+                        style: TextStyle(fontSize: 11, color: AppTheme.success, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
           // Actions
           Row(

@@ -44,7 +44,7 @@ class _ScheduleViewState extends State<ScheduleView> {
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
-                  initialValue: selectedEvent.isNotEmpty ? selectedEvent : null,
+                  value: selectedEvent.isNotEmpty ? selectedEvent : null,
                   items: widget.events
                       .map((e) => DropdownMenuItem(
                             value: e.id,
@@ -168,28 +168,30 @@ class _ScheduleViewState extends State<ScheduleView> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Master Schedule & Timeline',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimary,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Master Schedule & Timeline',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Coordinate day-of sessions, keynote speakers, and track schedules.',
-                    style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      'Coordinate day-of sessions and tracks.',
+                      style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                    ),
+                  ],
+                ),
               ),
-              ElevatedButton.icon(
+              const SizedBox(width: 12),
+              ElevatedButton(
                 onPressed: _addNewSession,
-                icon: const Icon(Icons.add_alarm_rounded, size: 18),
-                label: const Text('Add Session'),
+                child: const Icon(Icons.add_alarm_rounded, size: 20),
               ),
             ],
           ),
@@ -207,11 +209,6 @@ class _ScheduleViewState extends State<ScheduleView> {
               children: [
                 const Icon(Icons.calendar_month_outlined,
                     color: AppTheme.textSecondary, size: 20),
-                const SizedBox(width: 12),
-                const Text(
-                  'Select Event Agenda:',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: DropdownButton<String>(
@@ -252,9 +249,6 @@ class _ScheduleViewState extends State<ScheduleView> {
                   const SizedBox(height: 12),
                   const Text('No sessions planned',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  const Text('Add scheduled items or talks to this timeline.',
-                      style: TextStyle(color: AppTheme.textSecondary)),
                 ],
               ),
             )
@@ -282,7 +276,7 @@ class _ScheduleViewState extends State<ScheduleView> {
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 8),
+                            horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
                           color: AppTheme.primaryLight,
                           borderRadius: BorderRadius.circular(10),
@@ -291,12 +285,12 @@ class _ScheduleViewState extends State<ScheduleView> {
                           s.time,
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 13,
+                            fontSize: 12,
                             color: AppTheme.primary,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 18),
+                      const SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -313,9 +307,10 @@ class _ScheduleViewState extends State<ScheduleView> {
                                     ),
                                   ),
                                 ),
+                                const SizedBox(width: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 4),
+                                      horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
                                     color: AppTheme.background,
                                     borderRadius: BorderRadius.circular(8),
@@ -333,40 +328,58 @@ class _ScheduleViewState extends State<ScheduleView> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            Row(
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 8,
                               children: [
-                                const Icon(Icons.person_pin_outlined,
-                                    size: 16, color: AppTheme.textMuted),
-                                const SizedBox(width: 6),
-                                Text(
-                                  s.speakerName,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: AppTheme.textSecondary,
-                                  ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.person_pin_outlined,
+                                        size: 16, color: AppTheme.textMuted),
+                                    const SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(
+                                        s.speakerName,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: AppTheme.textSecondary,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 18),
-                                const Icon(Icons.location_on_outlined,
-                                    size: 16, color: AppTheme.textMuted),
-                                const SizedBox(width: 4),
-                                Text(
-                                  s.roomOrTrack,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: AppTheme.textSecondary,
-                                  ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.location_on_outlined,
+                                        size: 16, color: AppTheme.textMuted),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text(
+                                        s.roomOrTrack,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: AppTheme.textSecondary,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                             if (event != null) ...[
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 10),
                               Text(
                                 'Event: ${event.title}',
                                 style: const TextStyle(
                                   fontSize: 12,
                                   color: AppTheme.textMuted,
                                 ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ],

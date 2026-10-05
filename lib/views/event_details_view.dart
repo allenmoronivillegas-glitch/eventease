@@ -1,23 +1,28 @@
 import 'package:flutter/material.dart';
-import '../data/mock_data.dart';
 import '../models/event_model.dart';
 import '../theme/app_theme.dart';
 import 'register_attendee_dialog.dart';
 import 'send_announcement_dialog.dart';
 
 class EventDetailsView extends StatefulWidget {
-  final EventItem event;
+  final String eventId;
+  final List<EventItem> events;
   final List<AttendeeItem> attendees;
   final List<ScheduleItem> schedules;
   final List<AnnouncementItem> announcements;
+  final Function(AttendeeItem) onAttendeeRegistered;
+  final Function(AttendeeItem) onAttendeeCheckInToggled;
   final VoidCallback onDataChanged;
 
   const EventDetailsView({
     super.key,
-    required this.event,
+    required this.eventId,
+    required this.events,
     required this.attendees,
     required this.schedules,
     required this.announcements,
+    required this.onAttendeeRegistered,
+    required this.onAttendeeCheckInToggled,
     required this.onDataChanged,
   });
 
@@ -41,6 +46,9 @@ class _EventDetailsViewState extends State<EventDetailsView>
     _tabController.dispose();
     super.dispose();
   }
+
+  EventItem get _currentEvent => 
+      widget.events.firstWhere((e) => e.id == widget.eventId);
 
   void _openCheckInDialog() {
     showDialog(
@@ -110,42 +118,64 @@ class _EventDetailsViewState extends State<EventDetailsView>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Add Schedule Item'),
         content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleCtrl,
-                decoration: const InputDecoration(labelText: 'Session Title *'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: timeCtrl,
-                decoration: const InputDecoration(labelText: 'Time Slot *'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: speakerCtrl,
-                decoration: const InputDecoration(labelText: 'Speaker / Facilitator'),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: roomCtrl,
-                      decoration: const InputDecoration(labelText: 'Track / Room'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextField(
-                      controller: tagCtrl,
-                      decoration: const InputDecoration(labelText: 'Category Tag'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleCtrl,
+                  decoration: const InputDecoration(labelText: 'Session Title *'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: timeCtrl,
+                  decoration: const InputDecoration(labelText: 'Time Slot *'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: speakerCtrl,
+                  decoration: const InputDecoration(labelText: 'Speaker / Facilitator'),
+                ),
+                const SizedBox(height: 12),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (constraints.maxWidth < 300) {
+                      return Column(
+                        children: [
+                          TextField(
+                            controller: roomCtrl,
+                            decoration: const InputDecoration(labelText: 'Track / Room'),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: tagCtrl,
+                            decoration: const InputDecoration(labelText: 'Category Tag'),
+                          ),
+                        ],
+                      );
+                    }
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: roomCtrl,
+                            decoration: const InputDecoration(labelText: 'Track / Room'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: tagCtrl,
+                            decoration: const InputDecoration(labelText: 'Category Tag'),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
@@ -159,7 +189,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
                 widget.schedules.add(
                   ScheduleItem(
                     id: 'SCH-${DateTime.now().millisecondsSinceEpoch}',
-                    eventId: widget.event.id,
+                    eventId: widget.eventId,
                     time: timeCtrl.text.trim(),
                     title: titleCtrl.text.trim(),
                     speakerName: speakerCtrl.text.trim().isEmpty ? 'TBA' : speakerCtrl.text.trim(),
@@ -181,12 +211,14 @@ class _EventDetailsViewState extends State<EventDetailsView>
 
   @override
   Widget build(BuildContext context) {
+    final event = _currentEvent;
+    
     final eventAttendees =
-        widget.attendees.where((a) => a.eventId == widget.event.id).toList();
+        widget.attendees.where((a) => a.eventId == event.id).toList();
     final eventSchedules =
-        widget.schedules.where((s) => s.eventId == widget.event.id).toList();
+        widget.schedules.where((s) => s.eventId == event.id).toList();
     final eventAnnouncements =
-        widget.announcements.where((a) => a.eventId == widget.event.id).toList();
+        widget.announcements.where((a) => a.eventId == event.id).toList();
 
     final filteredAttendees = eventAttendees.where((a) {
       final query = _attendeeSearchQuery.toLowerCase();
@@ -195,15 +227,15 @@ class _EventDetailsViewState extends State<EventDetailsView>
           a.ticketType.toLowerCase().contains(query);
     }).toList();
 
-    final checkInRate = widget.event.registeredCount > 0
-        ? (widget.event.checkedInCount / widget.event.registeredCount * 100).toInt()
+    final checkInRate = event.registeredCount > 0
+        ? (event.checkedInCount / event.registeredCount * 100).toInt()
         : 0;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
         title: Text(
-          widget.event.title,
+          event.title,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         actions: [
@@ -219,8 +251,8 @@ class _EventDetailsViewState extends State<EventDetailsView>
               showDialog(
                 context: context,
                 builder: (ctx) => SendAnnouncementDialog(
-                  events: [widget.event],
-                  initialEventId: widget.event.id,
+                  events: [event],
+                  initialEventId: event.id,
                   onAnnouncementSent: (announcement) {
                     widget.announcements.insert(0, announcement);
                     widget.onDataChanged();
@@ -237,11 +269,10 @@ class _EventDetailsViewState extends State<EventDetailsView>
               showDialog(
                 context: context,
                 builder: (ctx) => RegisterAttendeeDialog(
-                  events: [widget.event],
-                  initialEventId: widget.event.id,
+                  events: [event],
+                  initialEventId: event.id,
                   onAttendeeRegistered: (attendee) {
-                    widget.attendees.insert(0, attendee);
-                    widget.onDataChanged();
+                    widget.onAttendeeRegistered(attendee);
                     setState(() {});
                   },
                 ),
@@ -256,6 +287,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
           unselectedLabelColor: AppTheme.textSecondary,
           indicatorColor: AppTheme.primary,
           indicatorWeight: 3,
+          isScrollable: true,
           tabs: [
             Tab(
               icon: const Icon(Icons.dashboard_outlined, size: 20),
@@ -280,10 +312,10 @@ class _EventDetailsViewState extends State<EventDetailsView>
         controller: _tabController,
         children: [
           // 1. OVERVIEW TAB
-          _buildOverviewTab(checkInRate, eventAttendees, eventSchedules),
+          _buildOverviewTab(event, checkInRate, eventAttendees, eventSchedules),
 
           // 2. ATTENDEES TAB (with check-in capability)
-          _buildAttendeesTab(filteredAttendees),
+          _buildAttendeesTab(event, filteredAttendees),
 
           // 3. SCHEDULE TAB
           _buildScheduleTab(eventSchedules),
@@ -296,7 +328,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
   }
 
   Widget _buildOverviewTab(
-      int checkInRate, List<AttendeeItem> attendees, List<ScheduleItem> schedules) {
+      EventItem event, int checkInRate, List<AttendeeItem> attendees, List<ScheduleItem> schedules) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -324,7 +356,9 @@ class _EventDetailsViewState extends State<EventDetailsView>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
@@ -333,7 +367,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        widget.event.category.toUpperCase(),
+                        event.category.toUpperCase(),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 11,
@@ -342,18 +376,18 @@ class _EventDetailsViewState extends State<EventDetailsView>
                         ),
                       ),
                     ),
-                    const SizedBox(width: 10),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: widget.event.status == 'Live'
+                        color: event.status == 'Live'
                             ? AppTheme.success
                             : Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (widget.event.status == 'Live')
+                          if (event.status == 'Live')
                             Container(
                               width: 8,
                               height: 8,
@@ -364,7 +398,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
                               ),
                             ),
                           Text(
-                            widget.event.status,
+                            event.status,
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 11,
@@ -378,7 +412,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  widget.event.title,
+                  event.title,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 24,
@@ -387,7 +421,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  widget.event.description,
+                  event.description,
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.9),
                     fontSize: 14,
@@ -399,9 +433,9 @@ class _EventDetailsViewState extends State<EventDetailsView>
                   spacing: 24,
                   runSpacing: 12,
                   children: [
-                    _infoBadge(Icons.calendar_today, widget.event.date),
-                    _infoBadge(Icons.access_time, widget.event.time),
-                    _infoBadge(Icons.location_on_outlined, widget.event.location),
+                    _infoBadge(Icons.calendar_today, event.date),
+                    _infoBadge(Icons.access_time, event.time),
+                    _infoBadge(Icons.location_on_outlined, event.location),
                   ],
                 ),
               ],
@@ -418,45 +452,40 @@ class _EventDetailsViewState extends State<EventDetailsView>
           LayoutBuilder(
             builder: (context, constraints) {
               final isWide = constraints.maxWidth > 700;
-              return Wrap(
-                spacing: 16,
-                runSpacing: 16,
+              final isNarrow = constraints.maxWidth < 450;
+              final crossCount = isWide ? 4 : (isNarrow ? 1 : 2);
+              
+              return GridView.count(
+                crossAxisCount: crossCount,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                childAspectRatio: isNarrow ? 3.8 : 1.3,
                 children: [
-                  SizedBox(
-                    width: isWide ? (constraints.maxWidth - 48) / 4 : (constraints.maxWidth - 16) / 2,
-                    child: _metricCard(
-                      'Total Capacity',
-                      '${widget.event.totalCapacity}',
-                      Icons.airline_seat_recline_normal,
-                      Colors.blue,
-                    ),
+                  _metricCard(
+                    'Total Capacity',
+                    '${event.totalCapacity}',
+                    Icons.airline_seat_recline_normal,
+                    Colors.blue,
                   ),
-                  SizedBox(
-                    width: isWide ? (constraints.maxWidth - 48) / 4 : (constraints.maxWidth - 16) / 2,
-                    child: _metricCard(
-                      'Registered',
-                      '${widget.event.registeredCount}',
-                      Icons.how_to_reg,
-                      AppTheme.primary,
-                    ),
+                  _metricCard(
+                    'Registered',
+                    '${event.registeredCount}',
+                    Icons.how_to_reg,
+                    AppTheme.primary,
                   ),
-                  SizedBox(
-                    width: isWide ? (constraints.maxWidth - 48) / 4 : (constraints.maxWidth - 16) / 2,
-                    child: _metricCard(
-                      'Checked-In',
-                      '${widget.event.checkedInCount}',
-                      Icons.check_circle_outline,
-                      AppTheme.success,
-                    ),
+                  _metricCard(
+                    'Checked-In',
+                    '${event.checkedInCount}',
+                    Icons.check_circle_outline,
+                    AppTheme.success,
                   ),
-                  SizedBox(
-                    width: isWide ? (constraints.maxWidth - 48) / 4 : (constraints.maxWidth - 16) / 2,
-                    child: _metricCard(
-                      'Check-in Rate',
-                      '$checkInRate%',
-                      Icons.insights,
-                      AppTheme.accent,
-                    ),
+                  _metricCard(
+                    'Check-in Rate',
+                    '$checkInRate%',
+                    Icons.insights,
+                    AppTheme.accent,
                   ),
                 ],
               );
@@ -475,15 +504,17 @@ class _EventDetailsViewState extends State<EventDetailsView>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  spacing: 12,
+                  runSpacing: 8,
                   children: [
                     const Text(
                       'Attendance & Venue Capacity Fulfillment',
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                     ),
                     Text(
-                      '${widget.event.registeredCount} / ${widget.event.totalCapacity} (${(widget.event.registeredCount / widget.event.totalCapacity * 100).toInt()}%)',
+                      '${event.registeredCount} / ${event.totalCapacity} (${(event.registeredCount / event.totalCapacity * 100).toInt()}%)',
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         color: AppTheme.primary,
@@ -495,7 +526,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: LinearProgressIndicator(
-                    value: widget.event.registeredCount / widget.event.totalCapacity,
+                    value: event.registeredCount / event.totalCapacity,
                     minHeight: 12,
                     backgroundColor: AppTheme.cardBorder,
                     valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primary),
@@ -505,12 +536,16 @@ class _EventDetailsViewState extends State<EventDetailsView>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      '${widget.event.totalCapacity - widget.event.registeredCount} spots remaining',
-                      style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                    Expanded(
+                      child: Text(
+                        '${event.totalCapacity - event.registeredCount} spots remaining',
+                        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
+                    const SizedBox(width: 12),
                     Text(
-                      '${widget.event.checkedInCount} checked-in at desk',
+                      '${event.checkedInCount} checked-in',
                       style: const TextStyle(fontSize: 12, color: AppTheme.success, fontWeight: FontWeight.w600),
                     ),
                   ],
@@ -547,28 +582,36 @@ class _EventDetailsViewState extends State<EventDetailsView>
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
           Text(
             value,
             style: const TextStyle(
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
               color: AppTheme.textPrimary,
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAttendeesTab(List<AttendeeItem> attendees) {
+  Widget _buildAttendeesTab(EventItem event, List<AttendeeItem> attendees) {
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -578,30 +621,28 @@ class _EventDetailsViewState extends State<EventDetailsView>
               Expanded(
                 child: TextField(
                   decoration: const InputDecoration(
-                    hintText: 'Search attendee by name, email or ticket pass...',
+                    hintText: 'Search attendee...',
                     prefixIcon: Icon(Icons.search, size: 20),
                   ),
                   onChanged: (val) => setState(() => _attendeeSearchQuery = val),
                 ),
               ),
               const SizedBox(width: 14),
-              ElevatedButton.icon(
+              ElevatedButton(
                 onPressed: () {
                   showDialog(
                     context: context,
                     builder: (ctx) => RegisterAttendeeDialog(
-                      events: [widget.event],
-                      initialEventId: widget.event.id,
+                      events: [event],
+                      initialEventId: event.id,
                       onAttendeeRegistered: (attendee) {
-                        widget.attendees.insert(0, attendee);
-                        widget.onDataChanged();
+                        widget.onAttendeeRegistered(attendee);
                         setState(() {});
                       },
                     ),
                   );
                 },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Add Attendee'),
+                child: const Icon(Icons.add, size: 18),
               ),
             ],
           ),
@@ -654,12 +695,15 @@ class _EventDetailsViewState extends State<EventDetailsView>
                                 children: [
                                   Row(
                                     children: [
-                                      Text(
-                                        att.name,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 15,
-                                          color: AppTheme.textPrimary,
+                                      Expanded(
+                                        child: Text(
+                                          att.name,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 15,
+                                            color: AppTheme.textPrimary,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                       const SizedBox(width: 8),
@@ -694,61 +738,23 @@ class _EventDetailsViewState extends State<EventDetailsView>
                                     '${att.email} • ${att.phone}',
                                     style: const TextStyle(
                                         fontSize: 12, color: AppTheme.textSecondary),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
                             ),
+                            const SizedBox(width: 8),
                             // Check-in status toggle button
-                            ElevatedButton.icon(
+                            IconButton(
                               onPressed: () {
-                                setState(() {
-                                  att.isCheckedIn = !att.isCheckedIn;
-                                  final increment = att.isCheckedIn ? 1 : -1;
-                                  
-                                  // update
-                                  final index = MockData.events.indexWhere((e) => e.id == widget.event.id);
-                                  if (index != -1) {
-                                    final e = MockData.events[index];
-                                    MockData.events[index] = EventItem(
-                                      id: e.id,
-                                      title: e.title,
-                                      description: e.description,
-                                      category: e.category,
-                                      date: e.date,
-                                      time: e.time,
-                                      location: e.location,
-                                      isVirtual: e.isVirtual,
-                                      totalCapacity: e.totalCapacity,
-                                      registeredCount: e.registeredCount,
-                                      checkedInCount: e.checkedInCount + increment,
-                                      ticketPrice: e.ticketPrice,
-                                      bannerImageUrl: e.bannerImageUrl,
-                                      status: e.status,
-                                    );
-                                  }
-                                });
-                                widget.onDataChanged();
+                                widget.onAttendeeCheckInToggled(att);
+                                setState(() {});
                               },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: att.isCheckedIn
-                                    ? AppTheme.successLight
-                                    : AppTheme.primaryLight,
-                                foregroundColor: att.isCheckedIn
-                                    ? AppTheme.success
-                                    : AppTheme.primary,
-                                elevation: 0,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 10),
-                              ),
                               icon: Icon(
                                 att.isCheckedIn
                                     ? Icons.check_circle
                                     : Icons.radio_button_unchecked,
-                                size: 16,
-                              ),
-                              label: Text(
-                                att.isCheckedIn ? 'Checked In' : 'Check In',
-                                style: const TextStyle(fontSize: 12),
+                                color: att.isCheckedIn ? AppTheme.success : AppTheme.primary,
                               ),
                             ),
                           ],
@@ -771,21 +777,23 @@ class _EventDetailsViewState extends State<EventDetailsView>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Day Agenda & Session Tracks',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              const Expanded(
+                child: Text(
+                  'Day Agenda',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              ElevatedButton.icon(
+              ElevatedButton(
                 onPressed: _addNewScheduleItem,
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Add Session'),
+                child: const Icon(Icons.add, size: 18),
               ),
             ],
           ),
           const SizedBox(height: 16),
           Expanded(
             child: schedules.isEmpty
-                ? const Center(child: Text('No schedule sessions registered yet.'))
+                ? const Center(child: Text('No sessions yet.'))
                 : ListView.separated(
                     itemCount: schedules.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 12),
@@ -812,7 +820,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
                                 item.time,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 12,
+                                  fontSize: 11,
                                   color: AppTheme.primary,
                                 ),
                               ),
@@ -852,27 +860,44 @@ class _EventDetailsViewState extends State<EventDetailsView>
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 6),
-                                  Row(
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 12,
+                                    runSpacing: 6,
                                     children: [
-                                      const Icon(Icons.person_pin_circle_outlined,
-                                          size: 15, color: AppTheme.textMuted),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        item.speakerName,
-                                        style: const TextStyle(
-                                            fontSize: 13,
-                                            color: AppTheme.textSecondary),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.person_pin_circle_outlined,
+                                              size: 14, color: AppTheme.textMuted),
+                                          const SizedBox(width: 4),
+                                          Flexible(
+                                            child: Text(
+                                              item.speakerName,
+                                              style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: AppTheme.textSecondary),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      const SizedBox(width: 16),
-                                      const Icon(Icons.room_outlined,
-                                          size: 15, color: AppTheme.textMuted),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        item.roomOrTrack,
-                                        style: const TextStyle(
-                                            fontSize: 13,
-                                            color: AppTheme.textSecondary),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.room_outlined,
+                                              size: 14, color: AppTheme.textMuted),
+                                          const SizedBox(width: 4),
+                                          Flexible(
+                                            child: Text(
+                                              item.roomOrTrack,
+                                              style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: AppTheme.textSecondary),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
@@ -899,17 +924,20 @@ class _EventDetailsViewState extends State<EventDetailsView>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Sent Broadcast Updates',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              const Expanded(
+                child: Text(
+                  'Broadcasts',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              ElevatedButton.icon(
+              ElevatedButton(
                 onPressed: () {
                   showDialog(
                     context: context,
                     builder: (ctx) => SendAnnouncementDialog(
-                      events: [widget.event],
-                      initialEventId: widget.event.id,
+                      events: [_currentEvent],
+                      initialEventId: _currentEvent.id,
                       onAnnouncementSent: (announcement) {
                         widget.announcements.insert(0, announcement);
                         widget.onDataChanged();
@@ -918,8 +946,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
                     ),
                   );
                 },
-                icon: const Icon(Icons.campaign_outlined, size: 18),
-                label: const Text('New Broadcast'),
+                child: const Icon(Icons.campaign, size: 18),
               ),
             ],
           ),
@@ -927,7 +954,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
           Expanded(
             child: announcements.isEmpty
                 ? const Center(
-                    child: Text('No announcements dispatched for this event.'))
+                    child: Text('No announcements yet.'))
                 : ListView.separated(
                     itemCount: announcements.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 12),
@@ -948,40 +975,37 @@ class _EventDetailsViewState extends State<EventDetailsView>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            Wrap(
+                              alignment: WrapAlignment.spaceBetween,
+                              spacing: 8,
+                              runSpacing: 8,
                               children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: isUrgent
-                                            ? AppTheme.dangerLight
-                                            : AppTheme.accentLight,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        a.priority.toUpperCase(),
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: isUrgent
-                                              ? AppTheme.danger
-                                              : AppTheme.accent,
-                                        ),
-                                      ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: isUrgent
+                                        ? AppTheme.dangerLight
+                                        : AppTheme.accentLight,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    a.priority.toUpperCase(),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: isUrgent
+                                          ? AppTheme.danger
+                                          : AppTheme.accent,
                                     ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Audience: ${a.sentTo}',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: AppTheme.textSecondary,
-                                      ),
-                                    ),
-                                  ],
+                                  ),
+                                ),
+                                Text(
+                                  'Target: ${a.sentTo}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppTheme.textSecondary,
+                                  ),
                                 ),
                                 Text(
                                   a.timestamp,

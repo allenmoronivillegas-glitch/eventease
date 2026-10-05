@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../data/mock_data.dart';
 import '../models/event_model.dart';
 import '../theme/app_theme.dart';
 import 'register_attendee_dialog.dart';
@@ -8,6 +7,7 @@ class AttendeesView extends StatefulWidget {
   final List<AttendeeItem> attendees;
   final List<EventItem> events;
   final Function(AttendeeItem) onAttendeeRegistered;
+  final Function(AttendeeItem) onAttendeeCheckInToggled;
   final VoidCallback onDataChanged;
 
   const AttendeesView({
@@ -15,6 +15,7 @@ class AttendeesView extends StatefulWidget {
     required this.attendees,
     required this.events,
     required this.onAttendeeRegistered,
+    required this.onAttendeeCheckInToggled,
     required this.onDataChanged,
   });
 
@@ -25,7 +26,7 @@ class AttendeesView extends StatefulWidget {
 class _AttendeesViewState extends State<AttendeesView> {
   String _searchQuery = '';
   String _filterTicket = 'All';
-  String _filterStatus = 'All'; // 'All', 'Checked In', 'Pending'
+  String _filterStatus = 'All';
 
   @override
   Widget build(BuildContext context) {
@@ -51,25 +52,28 @@ class _AttendeesViewState extends State<AttendeesView> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Attendee Registry & Badging',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimary,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Attendees',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Search attendees, verify registration credentials, and perform on-site check-in.',
-                    style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      'Manage your registrations.',
+                      style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                    ),
+                  ],
+                ),
               ),
-              ElevatedButton.icon(
+              const SizedBox(width: 12),
+              ElevatedButton(
                 onPressed: () {
                   showDialog(
                     context: context,
@@ -79,75 +83,91 @@ class _AttendeesViewState extends State<AttendeesView> {
                     ),
                   );
                 },
-                icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
-                label: const Text('Register Attendee'),
+                child: const Icon(Icons.person_add_alt_1_rounded, size: 20),
               ),
             ],
           ),
           const SizedBox(height: 24),
 
-          // Filters Bar
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.cardBorder),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      hintText: 'Search by attendee name, email, or badge ID...',
-                      prefixIcon: Icon(Icons.search, size: 20),
-                    ),
-                    onChanged: (val) => setState(() => _searchQuery = val),
-                  ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final bool isNarrow = constraints.maxWidth < 650;
+              final bool isExtraNarrow = constraints.maxWidth < 400;
+              
+              final searchField = TextField(
+                decoration: const InputDecoration(
+                  hintText: 'Search attendee...',
+                  prefixIcon: Icon(Icons.search, size: 20),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  flex: 1,
-                  child: DropdownButtonFormField<String>(
-                    initialValue: _filterTicket,
-                    items: ['All', 'VIP', 'General', 'Speaker', 'Student']
-                        .map((t) => DropdownMenuItem(value: t, child: Text(t)))
-                        .toList(),
-                    onChanged: (val) {
-                      if (val != null) setState(() => _filterTicket = val);
-                    },
-                    decoration: const InputDecoration(
-                      labelText: 'Pass Tier',
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    ),
-                  ),
+                onChanged: (val) => setState(() => _searchQuery = val),
+              );
+
+              final tierDropdown = DropdownButtonFormField<String>(
+                value: _filterTicket,
+                items: ['All', 'VIP', 'General', 'Speaker', 'Student']
+                    .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                    .toList(),
+                onChanged: (val) {
+                  if (val != null) setState(() => _filterTicket = val);
+                },
+                decoration: const InputDecoration(labelText: 'Tier'),
+              );
+
+              final statusDropdown = DropdownButtonFormField<String>(
+                value: _filterStatus,
+                items: ['All', 'Checked In', 'Pending']
+                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                    .toList(),
+                onChanged: (val) {
+                  if (val != null) setState(() => _filterStatus = val);
+                },
+                decoration: const InputDecoration(labelText: 'Status'),
+              );
+
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppTheme.cardBorder),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  flex: 1,
-                  child: DropdownButtonFormField<String>(
-                    initialValue: _filterStatus,
-                    items: ['All', 'Checked In', 'Pending']
-                        .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                        .toList(),
-                    onChanged: (val) {
-                      if (val != null) setState(() => _filterStatus = val);
-                    },
-                    decoration: const InputDecoration(
-                      labelText: 'Status',
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: isNarrow 
+                  ? Column(
+                      children: [
+                        searchField,
+                        const SizedBox(height: 12),
+                        isExtraNarrow 
+                          ? Column(
+                              children: [
+                                tierDropdown,
+                                const SizedBox(height: 12),
+                                statusDropdown,
+                              ],
+                            )
+                          : Row(
+                              children: [
+                                Expanded(child: tierDropdown),
+                                const SizedBox(width: 12),
+                                Expanded(child: statusDropdown),
+                              ],
+                            ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(flex: 3, child: searchField),
+                        const SizedBox(width: 14),
+                        Expanded(flex: 1, child: tierDropdown),
+                        const SizedBox(width: 14),
+                        Expanded(flex: 1, child: statusDropdown),
+                      ],
                     ),
-                  ),
-                ),
-              ],
-            ),
+              );
+            },
           ),
           const SizedBox(height: 24),
 
-          // Attendees List Table / Card
+          // Attendees List
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -157,12 +177,7 @@ class _AttendeesViewState extends State<AttendeesView> {
             child: filtered.isEmpty
                 ? const Padding(
                     padding: EdgeInsets.all(48.0),
-                    child: Center(
-                      child: Text(
-                        'No attendees match the criteria.',
-                        style: TextStyle(color: AppTheme.textSecondary),
-                      ),
-                    ),
+                    child: Center(child: Text('No results.')),
                   )
                 : ListView.separated(
                     shrinkWrap: true,
@@ -178,9 +193,9 @@ class _AttendeesViewState extends State<AttendeesView> {
 
                       return ListTile(
                         contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 12),
+                            horizontal: 20, vertical: 8),
                         leading: CircleAvatar(
-                          radius: 22,
+                          radius: 20,
                           backgroundColor: AppTheme.primaryLight,
                           child: Text(
                             att.name.isNotEmpty ? att.name[0] : '?',
@@ -192,109 +207,53 @@ class _AttendeesViewState extends State<AttendeesView> {
                         ),
                         title: Row(
                           children: [
-                            Text(
-                              att.name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                                color: AppTheme.textPrimary,
+                            Expanded(
+                              child: Text(
+                                att.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                  color: AppTheme.textPrimary,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
                                 color: att.ticketType == 'VIP'
                                     ? const Color(0xFFFEF3C7)
-                                    : att.ticketType == 'Speaker'
-                                        ? const Color(0xFFEDE9FE)
-                                        : AppTheme.background,
+                                    : AppTheme.background,
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
                                 att.ticketType,
                                 style: TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.w600,
                                   color: att.ticketType == 'VIP'
                                       ? const Color(0xFFD97706)
-                                      : att.ticketType == 'Speaker'
-                                          ? AppTheme.primary
-                                          : AppTheme.textSecondary,
+                                      : AppTheme.textSecondary,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        subtitle: Padding(
-                          padding: const EdgeInsets.only(top: 4.0),
-                          child: Row(
-                            children: [
-                              Text(
-                                att.email,
-                                style: const TextStyle(
-                                    fontSize: 12, color: AppTheme.textSecondary),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                '•   Event: ${event?.title ?? "General"}',
-                                style: const TextStyle(
-                                    fontSize: 12, color: AppTheme.textMuted),
-                              ),
-                            ],
-                          ),
+                        subtitle: Text(
+                          '${att.email} • ${event?.title ?? ""}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12),
                         ),
-                        trailing: ElevatedButton.icon(
-                          onPressed: () {
-                            setState(() {
-                              att.isCheckedIn = !att.isCheckedIn;
-                              final increment = att.isCheckedIn ? 1 : -1;
-                              
-                              // update event check-in count in mock data
-                              final index = MockData.events.indexWhere((e) => e.id == att.eventId);
-                              if (index != -1) {
-                                final e = MockData.events[index];
-                                MockData.events[index] = EventItem(
-                                  id: e.id,
-                                  title: e.title,
-                                  description: e.description,
-                                  category: e.category,
-                                  date: e.date,
-                                  time: e.time,
-                                  location: e.location,
-                                  isVirtual: e.isVirtual,
-                                  totalCapacity: e.totalCapacity,
-                                  registeredCount: e.registeredCount,
-                                  checkedInCount: e.checkedInCount + increment,
-                                  ticketPrice: e.ticketPrice,
-                                  bannerImageUrl: e.bannerImageUrl,
-                                  status: e.status,
-                                );
-                              }
-                            });
-                            widget.onDataChanged();
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: att.isCheckedIn
-                                ? AppTheme.successLight
-                                : AppTheme.primaryLight,
-                            foregroundColor: att.isCheckedIn
-                                ? AppTheme.success
-                                : AppTheme.primary,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 10),
-                          ),
+                        trailing: IconButton(
+                          onPressed: () => widget.onAttendeeCheckInToggled(att),
                           icon: Icon(
                             att.isCheckedIn
                                 ? Icons.check_circle
                                 : Icons.radio_button_unchecked,
-                            size: 16,
-                          ),
-                          label: Text(
-                            att.isCheckedIn ? 'Checked In' : 'Mark Check-In',
-                            style: const TextStyle(fontSize: 12),
+                            color: att.isCheckedIn ? AppTheme.success : AppTheme.primary,
                           ),
                         ),
                       );

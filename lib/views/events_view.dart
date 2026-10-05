@@ -10,6 +10,8 @@ class EventsView extends StatefulWidget {
   final List<ScheduleItem> schedules;
   final List<AnnouncementItem> announcements;
   final Function(EventItem) onEventCreated;
+  final Function(AttendeeItem) onAttendeeRegistered;
+  final Function(AttendeeItem) onAttendeeCheckInToggled;
   final VoidCallback onDataChanged;
 
   const EventsView({
@@ -19,6 +21,8 @@ class EventsView extends StatefulWidget {
     required this.schedules,
     required this.announcements,
     required this.onEventCreated,
+    required this.onAttendeeRegistered,
+    required this.onAttendeeCheckInToggled,
     required this.onDataChanged,
   });
 
@@ -53,25 +57,28 @@ class _EventsViewState extends State<EventsView> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Event Management',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimary,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Events Directory',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Plan, monitor, and manage your live and upcoming events.',
-                    style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      'Manage your upcoming events.',
+                      style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                    ),
+                  ],
+                ),
               ),
-              ElevatedButton.icon(
+              const SizedBox(width: 12),
+              ElevatedButton(
                 onPressed: () {
                   showDialog(
                     context: context,
@@ -80,53 +87,63 @@ class _EventsViewState extends State<EventsView> {
                     ),
                   );
                 },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Create Event'),
+                child: const Icon(Icons.add, size: 20),
               ),
             ],
           ),
           const SizedBox(height: 24),
 
           // Filters & Search Bar
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.cardBorder),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      hintText: 'Search event by title, venue or tag...',
-                      prefixIcon: Icon(Icons.search, size: 20),
-                    ),
-                    onChanged: (val) => setState(() => _searchQuery = val),
-                  ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final bool isNarrow = constraints.maxWidth < 500;
+              final searchField = TextField(
+                decoration: const InputDecoration(
+                  hintText: 'Search event...',
+                  prefixIcon: Icon(Icons.search, size: 20),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  flex: 1,
-                  child: DropdownButtonFormField<String>(
-                    initialValue: _filterCategory,
-                    items: categories
-                        .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                        .toList(),
-                    onChanged: (val) {
-                      if (val != null) setState(() => _filterCategory = val);
-                    },
-                    decoration: const InputDecoration(
-                      labelText: 'Category',
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    ),
-                  ),
+                onChanged: (val) => setState(() => _searchQuery = val),
+              );
+
+              final categoryDropdown = DropdownButtonFormField<String>(
+                value: _filterCategory,
+                items: categories
+                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .toList(),
+                onChanged: (val) {
+                  if (val != null) setState(() => _filterCategory = val);
+                },
+                decoration: const InputDecoration(
+                  labelText: 'Category',
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 ),
-              ],
-            ),
+              );
+
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppTheme.cardBorder),
+                ),
+                child: isNarrow 
+                  ? Column(
+                      children: [
+                        searchField,
+                        const SizedBox(height: 12),
+                        categoryDropdown,
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(flex: 2, child: searchField),
+                        const SizedBox(width: 16),
+                        Expanded(flex: 1, child: categoryDropdown),
+                      ],
+                    ),
+              );
+            },
           ),
           const SizedBox(height: 24),
 
@@ -155,14 +172,9 @@ class _EventsViewState extends State<EventsView> {
                       Icon(Icons.event_busy, size: 50, color: AppTheme.textMuted),
                       const SizedBox(height: 12),
                       const Text(
-                        'No events matching criteria',
+                        'No events found',
                         style: TextStyle(
                             fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Try adjusting your search terms or create a new event.',
-                        style: TextStyle(color: AppTheme.textSecondary),
                       ),
                     ],
                   ),
@@ -177,7 +189,7 @@ class _EventsViewState extends State<EventsView> {
                   crossAxisCount: crossAxisCount,
                   crossAxisSpacing: 20,
                   mainAxisSpacing: 20,
-                  mainAxisExtent: 380,
+                  mainAxisExtent: 400,
                 ),
                 itemBuilder: (context, index) {
                   final event = filteredEvents[index];
@@ -231,8 +243,9 @@ class _EventsViewState extends State<EventsView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -244,7 +257,7 @@ class _EventsViewState extends State<EventsView> {
                         event.category,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 11,
+                          fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -261,7 +274,7 @@ class _EventsViewState extends State<EventsView> {
                         event.status,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 11,
+                          fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -322,7 +335,7 @@ class _EventsViewState extends State<EventsView> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'Registration Capacity',
+                      'Registration',
                       style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                     ),
                     Text(
@@ -346,8 +359,10 @@ class _EventsViewState extends State<EventsView> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  spacing: 12,
+                  runSpacing: 4,
                   children: [
                     Text(
                       'Checked-in: ${event.checkedInCount}',
@@ -358,9 +373,9 @@ class _EventsViewState extends State<EventsView> {
                       ),
                     ),
                     Text(
-                      event.ticketPrice > 0 ? '\$${event.ticketPrice.toStringAsFixed(0)}' : 'Free Entry',
+                      event.ticketPrice > 0 ? '\$${event.ticketPrice.toStringAsFixed(0)}' : 'Free',
                       style: const TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: AppTheme.textPrimary,
                       ),
@@ -372,22 +387,24 @@ class _EventsViewState extends State<EventsView> {
                 // Manage / Details Button
                 SizedBox(
                   width: double.infinity,
-                  child: OutlinedButton.icon(
+                  child: OutlinedButton(
                     onPressed: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (context) => EventDetailsView(
-                            event: event,
+                            eventId: event.id,
+                            events: widget.events,
                             attendees: widget.attendees,
                             schedules: widget.schedules,
                             announcements: widget.announcements,
+                            onAttendeeRegistered: widget.onAttendeeRegistered,
+                            onAttendeeCheckInToggled: widget.onAttendeeCheckInToggled,
                             onDataChanged: widget.onDataChanged,
                           ),
                         ),
                       );
                     },
-                    icon: const Icon(Icons.settings_outlined, size: 16),
-                    label: const Text('Manage Event'),
+                    child: const Text('Manage Event'),
                   ),
                 ),
               ],

@@ -145,95 +145,123 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
                               v == null || v.isEmpty ? 'Title is required' : null,
                         ),
                         const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('Category',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.w600, fontSize: 13)),
-                                  const SizedBox(height: 6),
-                                  DropdownButtonFormField<String>(
-                                    initialValue: _selectedCategory,
-                                    items: _categories
-                                        .map((c) => DropdownMenuItem(
-                                              value: c,
-                                              child: Text(c),
-                                            ))
-                                        .toList(),
-                                    onChanged: (val) =>
-                                        setState(() => _selectedCategory = val!),
-                                    decoration: const InputDecoration(),
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final bool isNarrow = constraints.maxWidth < 400;
+                            final categoryField = Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Category',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w600, fontSize: 13)),
+                                const SizedBox(height: 6),
+                                DropdownButtonFormField<String>(
+                                  value: _selectedCategory,
+                                  items: _categories
+                                      .map((c) => DropdownMenuItem(
+                                            value: c,
+                                            child: Text(c),
+                                          ))
+                                      .toList(),
+                                  onChanged: (val) =>
+                                      setState(() => _selectedCategory = val!),
+                                  decoration: const InputDecoration(),
+                                ),
+                              ],
+                            );
+
+                            final capacityField = Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Capacity *',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w600, fontSize: 13)),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: _capacityController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    hintText: 'e.g. 500',
                                   ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                  validator: (v) =>
+                                      v == null || v.isEmpty ? 'Required' : null,
+                                ),
+                              ],
+                            );
+
+                            if (isNarrow) {
+                              return Column(
                                 children: [
-                                  const Text('Capacity *',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.w600, fontSize: 13)),
-                                  const SizedBox(height: 6),
-                                  TextFormField(
-                                    controller: _capacityController,
-                                    keyboardType: TextInputType.number,
-                                    decoration: const InputDecoration(
-                                      hintText: 'e.g. 500',
-                                    ),
-                                    validator: (v) =>
-                                        v == null || v.isEmpty ? 'Required' : null,
-                                  ),
+                                  categoryField,
+                                  const SizedBox(height: 16),
+                                  capacityField,
                                 ],
-                              ),
-                            ),
-                          ],
+                              );
+                            }
+                            return Row(
+                              children: [
+                                Expanded(child: categoryField),
+                                const SizedBox(width: 16),
+                                Expanded(child: capacityField),
+                              ],
+                            );
+                          },
                         ),
                         const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('Date *',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.w600, fontSize: 13)),
-                                  const SizedBox(height: 6),
-                                  TextFormField(
-                                    controller: _dateController,
-                                    decoration: const InputDecoration(
-                                      hintText: 'e.g. Oct 24, 2026',
-                                      prefixIcon: Icon(Icons.calendar_today, size: 18),
-                                    ),
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final bool isNarrow = constraints.maxWidth < 400;
+                            final dateField = Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Date *',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w600, fontSize: 13)),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: _dateController,
+                                  decoration: const InputDecoration(
+                                    hintText: 'e.g. Oct 24, 2026',
+                                    prefixIcon: Icon(Icons.calendar_today, size: 18),
                                   ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('Time *',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.w600, fontSize: 13)),
-                                  const SizedBox(height: 6),
-                                  TextFormField(
-                                    controller: _timeController,
-                                    decoration: const InputDecoration(
-                                      hintText: 'e.g. 09:00 AM - 05:00 PM',
-                                      prefixIcon: Icon(Icons.access_time, size: 18),
-                                    ),
+                                ),
+                              ],
+                            );
+
+                            final timeField = Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Time *',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w600, fontSize: 13)),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: _timeController,
+                                  decoration: const InputDecoration(
+                                    hintText: 'e.g. 09:00 AM - 05:00 PM',
+                                    prefixIcon: Icon(Icons.access_time, size: 18),
                                   ),
+                                ),
+                              ],
+                            );
+
+                            if (isNarrow) {
+                              return Column(
+                                children: [
+                                  dateField,
+                                  const SizedBox(height: 16),
+                                  timeField,
                                 ],
-                              ),
-                            ),
-                          ],
+                              );
+                            }
+                            return Row(
+                              children: [
+                                Expanded(child: dateField),
+                                const SizedBox(width: 16),
+                                Expanded(child: timeField),
+                              ],
+                            );
+                          },
                         ),
                         const SizedBox(height: 16),
                         const Text('Location / Venue *',
