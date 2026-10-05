@@ -22,7 +22,7 @@ class _HomePageState extends State<HomePage> {
 
   final List<EventItem> _events = [];
   final FirestoreService _firestoreService = FirestoreService();
-  final List<AttendeeItem> _attendees = MockData.attendees;
+  final List<AttendeeItem> _attendees = [];
   final List<ScheduleItem> _schedules = MockData.schedules;
   final List<AnnouncementItem> _announcements = MockData.announcements;
 
@@ -38,6 +38,16 @@ class _HomePageState extends State<HomePage> {
         _events
           ..clear()
           ..addAll(events);
+      });
+    });
+
+    _firestoreService.getAttendees().listen((attendees) {
+      if (!mounted) return;
+
+      setState(() {
+        _attendees
+          ..clear()
+          ..addAll(attendees);
       });
     });
   }
@@ -64,31 +74,28 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _onAttendeeRegistered(AttendeeItem attendee) {
-    setState(() {
-      _attendees.insert(0, attendee);
-      // Increment event registered count
-      final index = _events.indexWhere((e) => e.id == attendee.eventId);
-      if (index != -1) {
-        final ev = _events[index];
-        _events[index] = EventItem(
-          id: ev.id,
-          title: ev.title,
-          description: ev.description,
-          category: ev.category,
-          date: ev.date,
-          time: ev.time,
-          location: ev.location,
-          isVirtual: ev.isVirtual,
-          totalCapacity: ev.totalCapacity,
-          registeredCount: ev.registeredCount + 1,
-          checkedInCount: ev.checkedInCount,
-          ticketPrice: ev.ticketPrice,
-          bannerImageUrl: ev.bannerImageUrl,
-          status: ev.status,
-        );
-      }
-    });
+
+
+  Future<void> _onAttendeeRegistered(AttendeeItem attendee) async {
+    try {
+      await _firestoreService.createAttendee(attendee);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Attendee saved to Firebase successfully!'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to save attendee: $e'),
+        ),
+      );
+    }
   }
 
   void _onAnnouncementSent(AnnouncementItem announcement) {
@@ -97,31 +104,37 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  void _onAttendeeCheckInToggled(AttendeeItem attendee) {
-    setState(() {
-      attendee.isCheckedIn = !attendee.isCheckedIn;
-      final increment = attendee.isCheckedIn ? 1 : -1;
-      final index = _events.indexWhere((e) => e.id == attendee.eventId);
-      if (index != -1) {
-        final ev = _events[index];
-        _events[index] = EventItem(
-          id: ev.id,
-          title: ev.title,
-          description: ev.description,
-          category: ev.category,
-          date: ev.date,
-          time: ev.time,
-          location: ev.location,
-          isVirtual: ev.isVirtual,
-          totalCapacity: ev.totalCapacity,
-          registeredCount: ev.registeredCount,
-          checkedInCount: ev.checkedInCount + increment,
-          ticketPrice: ev.ticketPrice,
-          bannerImageUrl: ev.bannerImageUrl,
-          status: ev.status,
-        );
-      }
-    });
+  Future<void> _onAttendeeCheckInToggled(
+      AttendeeItem attendee,
+      ) async {
+    try {
+      final newStatus = !attendee.isCheckedIn;
+
+      await _firestoreService.updateAttendeeCheckIn(
+        attendee,
+        newStatus,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            newStatus
+                ? '${attendee.name} checked in successfully!'
+                : '${attendee.name} check-in cancelled.',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update check-in: $e'),
+        ),
+      );
+    }
   }
 
   @override
