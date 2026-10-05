@@ -8,6 +8,7 @@ import 'views/create_event_dialog.dart';
 import 'views/dashboard_view.dart';
 import 'views/events_view.dart';
 import 'views/schedule_view.dart';
+import 'services/firestore_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -19,15 +20,48 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
-  final List<EventItem> _events = MockData.events;
+  final List<EventItem> _events = [];
+  final FirestoreService _firestoreService = FirestoreService();
   final List<AttendeeItem> _attendees = MockData.attendees;
   final List<ScheduleItem> _schedules = MockData.schedules;
   final List<AnnouncementItem> _announcements = MockData.announcements;
 
-  void _onEventCreated(EventItem event) {
-    setState(() {
-      _events.insert(0, event);
+
+  @override
+  void initState() {
+    super.initState();
+
+    _firestoreService.getEvents().listen((events) {
+      if (!mounted) return;
+
+      setState(() {
+        _events
+          ..clear()
+          ..addAll(events);
+      });
     });
+  }
+
+  Future<void> _onEventCreated(EventItem event) async {
+    try {
+      await _firestoreService.createEvent(event);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Event saved to Firebase successfully!'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to save event: $e'),
+        ),
+      );
+    }
   }
 
   void _onAttendeeRegistered(AttendeeItem attendee) {
