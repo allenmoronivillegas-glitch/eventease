@@ -23,7 +23,7 @@ class _HomePageState extends State<HomePage> {
   final List<EventItem> _events = [];
   final FirestoreService _firestoreService = FirestoreService();
   final List<AttendeeItem> _attendees = [];
-  final List<ScheduleItem> _schedules = MockData.schedules;
+  final List<ScheduleItem> _schedules = [];
   final List<AnnouncementItem> _announcements = MockData.announcements;
 
 
@@ -48,6 +48,15 @@ class _HomePageState extends State<HomePage> {
         _attendees
           ..clear()
           ..addAll(attendees);
+      });
+    });
+    _firestoreService.getSchedules().listen((schedules) {
+      if (!mounted) return;
+
+      setState(() {
+        _schedules
+          ..clear()
+          ..addAll(schedules);
       });
     });
   }

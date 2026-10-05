@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/event_model.dart';
 import '../theme/app_theme.dart';
+import '../services/firestore_service.dart';
 
 class ScheduleView extends StatefulWidget {
   final List<ScheduleItem> schedules;
@@ -20,6 +21,7 @@ class ScheduleView extends StatefulWidget {
 
 class _ScheduleViewState extends State<ScheduleView> {
   String _selectedEventId = 'All';
+  final FirestoreService _firestoreService = FirestoreService();
 
   void _addNewSession() {
     final titleCtrl = TextEditingController();
@@ -126,22 +128,45 @@ class _ScheduleViewState extends State<ScheduleView> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 if (titleCtrl.text.trim().isNotEmpty && selectedEvent.isNotEmpty) {
-                  widget.schedules.add(
-                    ScheduleItem(
-                      id: 'SCH-${DateTime.now().millisecondsSinceEpoch}',
-                      eventId: selectedEvent,
-                      time: timeCtrl.text.trim(),
-                      title: titleCtrl.text.trim(),
-                      speakerName: speakerCtrl.text.trim().isEmpty ? 'TBA' : speakerCtrl.text.trim(),
-                      roomOrTrack: roomCtrl.text.trim().isEmpty ? 'Main Hall' : roomCtrl.text.trim(),
-                      tag: tagCtrl.text.trim().isEmpty ? 'General' : tagCtrl.text.trim(),
-                    ),
+                  final schedule = ScheduleItem(
+                    id: 'SCH-${DateTime.now().millisecondsSinceEpoch}',
+                    eventId: selectedEvent,
+                    time: timeCtrl.text.trim(),
+                    title: titleCtrl.text.trim(),
+                    speakerName: speakerCtrl.text.trim().isEmpty
+                        ? 'TBA'
+                        : speakerCtrl.text.trim(),
+                    roomOrTrack: roomCtrl.text.trim().isEmpty
+                        ? 'Main Hall'
+                        : roomCtrl.text.trim(),
+                    tag: tagCtrl.text.trim().isEmpty
+                        ? 'General'
+                        : tagCtrl.text.trim(),
                   );
-                  widget.onDataChanged();
-                  setState(() {});
-                  Navigator.of(ctx).pop();
+
+                  try {
+                    await _firestoreService.createSchedule(schedule);
+
+                    if (!context.mounted) return;
+
+                    Navigator.of(ctx).pop();
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Schedule saved to Firebase successfully!'),
+                      ),
+                    );
+                  } catch (e) {
+                    if (!context.mounted) return;
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to save schedule: $e'),
+                      ),
+                    );
+                  }
                 }
               },
               child: const Text('Add Session'),
