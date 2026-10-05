@@ -24,7 +24,7 @@ class _HomePageState extends State<HomePage> {
   final FirestoreService _firestoreService = FirestoreService();
   final List<AttendeeItem> _attendees = [];
   final List<ScheduleItem> _schedules = [];
-  final List<AnnouncementItem> _announcements = MockData.announcements;
+  final List<AnnouncementItem> _announcements = [];
 
 
   @override
@@ -57,6 +57,15 @@ class _HomePageState extends State<HomePage> {
         _schedules
           ..clear()
           ..addAll(schedules);
+      });
+    });
+    _firestoreService.getAnnouncements().listen((announcements) {
+      if (!mounted) return;
+
+      setState(() {
+        _announcements
+          ..clear()
+          ..addAll(announcements);
       });
     });
   }
@@ -107,10 +116,32 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _onAnnouncementSent(AnnouncementItem announcement) {
-    setState(() {
-      _announcements.insert(0, announcement);
-    });
+  Future<void> _onAnnouncementSent(
+      AnnouncementItem announcement,
+      ) async {
+    try {
+      await _firestoreService.createAnnouncement(announcement);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Announcement saved to Firebase successfully!',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to save announcement: $e',
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _onAttendeeCheckInToggled(
