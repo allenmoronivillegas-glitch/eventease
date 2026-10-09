@@ -7,6 +7,7 @@ import 'views/create_event_dialog.dart';
 import 'views/dashboard_view.dart';
 import 'views/events_view.dart';
 import 'views/schedule_view.dart';
+import 'views/settings_page.dart';
 import 'services/firestore_service.dart';
 
 class HomePage extends StatefulWidget {
@@ -176,6 +177,12 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void _openSettings() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const SettingsPage()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = [
@@ -253,14 +260,14 @@ class _HomePageState extends State<HomePage> {
             appBar: AppBar(
               title: Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary,
-                      borderRadius: BorderRadius.circular(8),
+                  SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: Image.asset(
+                      'assets/branding/logo.png',
+                      fit: BoxFit.contain,
+                      semanticLabel: 'EventEase logo',
                     ),
-                    child: const Icon(Icons.event_seat_rounded,
-                        color: Colors.white, size: 18),
                   ),
                   const SizedBox(width: 8),
                   const Text(
@@ -285,6 +292,11 @@ class _HomePageState extends State<HomePage> {
                 IconButton(
                   icon: const Icon(Icons.notifications_none_rounded),
                   onPressed: () => setState(() => _selectedIndex = 4),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.settings_outlined),
+                  tooltip: 'Settings',
+                  onPressed: _openSettings,
                 ),
               ],
             ),
@@ -340,16 +352,14 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppTheme.primary, AppTheme.accent],
-                    ),
-                    borderRadius: BorderRadius.circular(10),
+                SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: Image.asset(
+                    'assets/branding/logo.png',
+                    fit: BoxFit.contain,
+                    semanticLabel: 'EventEase logo',
                   ),
-                  child: const Icon(Icons.event_seat_rounded,
-                      color: Colors.white, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Column(
@@ -536,6 +546,11 @@ class _HomePageState extends State<HomePage> {
                 icon: const Icon(Icons.help_outline_rounded, color: AppTheme.textSecondary),
                 tooltip: 'Documentation & Help',
                 onPressed: () {},
+              ),
+              IconButton(
+                icon: const Icon(Icons.settings_outlined, color: AppTheme.textSecondary),
+                tooltip: 'Settings',
+                onPressed: _openSettings,
               ),
               const SizedBox(width: 8),
               Stack(
