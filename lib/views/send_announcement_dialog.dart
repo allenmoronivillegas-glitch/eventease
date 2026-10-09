@@ -130,7 +130,7 @@ class _SendAnnouncementDialogState extends State<SendAnnouncementDialog> {
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
-                  value: _selectedEventId.isNotEmpty ? _selectedEventId : null,
+                  initialValue: _selectedEventId.isNotEmpty ? _selectedEventId : null,
                   items: widget.events
                       .map((e) => DropdownMenuItem(
                             value: e.id,
@@ -154,7 +154,7 @@ class _SendAnnouncementDialogState extends State<SendAnnouncementDialog> {
                                 fontWeight: FontWeight.w600, fontSize: 13)),
                         const SizedBox(height: 6),
                         DropdownButtonFormField<String>(
-                          value: _recipientGroup,
+                          initialValue: _recipientGroup,
                           items: _audiences
                               .map((a) => DropdownMenuItem(
                                     value: a,
@@ -176,7 +176,7 @@ class _SendAnnouncementDialogState extends State<SendAnnouncementDialog> {
                                 fontWeight: FontWeight.w600, fontSize: 13)),
                         const SizedBox(height: 6),
                         DropdownButtonFormField<String>(
-                          value: _priority,
+                          initialValue: _priority,
                           items: _priorities
                               .map((p) => DropdownMenuItem(
                                     value: p,

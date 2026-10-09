@@ -46,7 +46,7 @@ class _ScheduleViewState extends State<ScheduleView> {
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
-                  value: selectedEvent.isNotEmpty ? selectedEvent : null,
+                  initialValue: selectedEvent.isNotEmpty ? selectedEvent : null,
                   items: widget.events
                       .map((e) => DropdownMenuItem(
                             value: e.id,

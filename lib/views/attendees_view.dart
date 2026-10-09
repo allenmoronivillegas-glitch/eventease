@@ -103,7 +103,7 @@ class _AttendeesViewState extends State<AttendeesView> {
               );
 
               final tierDropdown = DropdownButtonFormField<String>(
-                value: _filterTicket,
+                initialValue: _filterTicket,
                 items: ['All', 'VIP', 'General', 'Speaker', 'Student']
                     .map((t) => DropdownMenuItem(value: t, child: Text(t)))
                     .toList(),
@@ -114,7 +114,7 @@ class _AttendeesViewState extends State<AttendeesView> {
               );
 
               final statusDropdown = DropdownButtonFormField<String>(
-                value: _filterStatus,
+                initialValue: _filterStatus,
                 items: ['All', 'Checked In', 'Pending']
                     .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                     .toList(),

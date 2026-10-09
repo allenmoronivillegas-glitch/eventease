@@ -126,7 +126,7 @@ class _RegisterAttendeeDialogState extends State<RegisterAttendeeDialog> {
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
-                  value: _selectedEventId.isNotEmpty ? _selectedEventId : null,
+                  initialValue: _selectedEventId.isNotEmpty ? _selectedEventId : null,
                   items: widget.events
                       .map((e) => DropdownMenuItem(
                             value: e.id,
@@ -183,7 +183,7 @@ class _RegisterAttendeeDialogState extends State<RegisterAttendeeDialog> {
                                 fontWeight: FontWeight.w600, fontSize: 13)),
                         const SizedBox(height: 6),
                         DropdownButtonFormField<String>(
-                          value: _selectedTicket,
+                          initialValue: _selectedTicket,
                           items: _ticketTypes
                               .map((t) => DropdownMenuItem(
                                     value: t,

@@ -156,7 +156,7 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
                                         fontWeight: FontWeight.w600, fontSize: 13)),
                                 const SizedBox(height: 6),
                                 DropdownButtonFormField<String>(
-                                  value: _selectedCategory,
+                                  initialValue: _selectedCategory,
                                   items: _categories
                                       .map((c) => DropdownMenuItem(
                                             value: c,

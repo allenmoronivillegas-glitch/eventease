@@ -106,7 +106,7 @@ class _EventsViewState extends State<EventsView> {
               );
 
               final categoryDropdown = DropdownButtonFormField<String>(
-                value: _filterCategory,
+                initialValue: _filterCategory,
                 items: categories
                     .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                     .toList(),
