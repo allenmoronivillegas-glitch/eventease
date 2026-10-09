@@ -1,3 +1,4 @@
+import 'package:eventease/auth/auth_page.dart';
 import 'package:eventease/home_page.dart';
 import 'package:firebase_core/firebase_core.dart' show Firebase;
 import 'package:flutter/material.dart';
@@ -26,7 +27,7 @@ class EventEaseApp extends StatelessWidget {
       title: 'EventEase - Event Management Platform',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const HomePage(),
+      home: const AuthPage(),
     );
   }
-}
+} 

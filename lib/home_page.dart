@@ -471,25 +471,28 @@ class _HomePageState extends State<HomePage> {
     final isSelected = _selectedIndex == index;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-      child: ListTile(
-        dense: true,
-        selected: isSelected,
-        selectedTileColor: AppTheme.primaryLight,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        leading: Icon(
-          isSelected ? activeIcon : icon,
-          color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
-          size: 20,
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            color: isSelected ? AppTheme.primary : AppTheme.textPrimary,
+      child: Material(
+        color: Colors.transparent,
+        child: ListTile(
+          dense: true,
+          selected: isSelected,
+          selectedTileColor: AppTheme.primaryLight,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          leading: Icon(
+            isSelected ? activeIcon : icon,
+            color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
+            size: 20,
           ),
+          title: Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              color: isSelected ? AppTheme.primary : AppTheme.textPrimary,
+            ),
+          ),
+          onTap: () => setState(() => _selectedIndex = index),
         ),
-        onTap: () => setState(() => _selectedIndex = index),
       ),
     );
   }
