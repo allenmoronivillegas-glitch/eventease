@@ -143,7 +143,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
         _saving = false;
         _saved = true;
       });
-      await Future<void>.delayed(const Duration(milliseconds: 900));
       if (mounted) widget.onFinished();
     } catch (error) {
       if (error is TimeoutException) {

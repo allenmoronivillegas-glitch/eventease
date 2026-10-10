@@ -10,6 +10,15 @@ class UserProfileService {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
 
+  Stream<Map<String, dynamic>?> watchProfile(String uid) {
+    _requireMatchingAuthenticatedUser(uid, 'watchProfile');
+    return _firestore
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .map((snapshot) => snapshot.data());
+  }
+
   Future<bool> hasCompletedOnboarding(String uid) async {
     _requireMatchingAuthenticatedUser(uid, 'hasCompletedOnboarding');
 

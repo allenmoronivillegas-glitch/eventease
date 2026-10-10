@@ -104,6 +104,11 @@ class _AuthenticatedUserGateState extends State<_AuthenticatedUserGate> {
     setState(() => _profileCheck = _checkProfile());
   }
 
+  void _markProfileComplete() {
+    if (!mounted) return;
+    setState(() => _profileCheck = Future<bool>.value(true));
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<bool>(
@@ -119,7 +124,10 @@ class _AuthenticatedUserGateState extends State<_AuthenticatedUserGate> {
           );
         }
         if (snapshot.data != true) {
-          return OnboardingPage(user: widget.user, onFinished: _retry);
+          return OnboardingPage(
+            user: widget.user,
+            onFinished: _markProfileComplete,
+          );
         }
         return const HomePage();
       },

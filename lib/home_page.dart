@@ -1,5 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
 import 'models/event_model.dart';
+import 'services/user_profile_service.dart';
 import 'theme/app_theme.dart';
 import 'views/announcements_view.dart';
 import 'views/attendees_view.dart';
@@ -22,14 +25,21 @@ class _HomePageState extends State<HomePage> {
 
   final List<EventItem> _events = [];
   final FirestoreService _firestoreService = FirestoreService();
+  final UserProfileService _userProfileService = UserProfileService();
+  User? _signedInUser;
+  Stream<Map<String, dynamic>?>? _userProfileStream;
   final List<AttendeeItem> _attendees = [];
   final List<ScheduleItem> _schedules = [];
   final List<AnnouncementItem> _announcements = [];
 
-
   @override
   void initState() {
     super.initState();
+    _signedInUser = FirebaseAuth.instance.currentUser;
+    final user = _signedInUser;
+    if (user != null) {
+      _userProfileStream = _userProfileService.watchProfile(user.uid);
+    }
 
     _firestoreService.getEvents().listen((events) {
       if (!mounted) return;
@@ -419,45 +429,108 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
 
-          // User Profile pill
-          Container(
-            padding: const EdgeInsets.all(16),
-            margin: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppTheme.background,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.cardBorder),
-            ),
-            child: Row(
+          _buildUserProfilePill(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUserProfilePill() {
+    final user = _signedInUser;
+    if (user == null) {
+      return _userProfilePill(name: 'EventEase User', role: 'Member');
+    }
+
+    return StreamBuilder<Map<String, dynamic>?>(
+      stream: _userProfileStream,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          final error = snapshot.error;
+          if (error is FirebaseException) {
+            debugPrint(
+              '[HomePage] User profile stream failed (code=${error.code})',
+            );
+          } else {
+            debugPrint(
+              '[HomePage] User profile stream failed '
+              '(${error.runtimeType})',
+            );
+          }
+        }
+
+        final profile = snapshot.data;
+        final name =
+            _nonEmptyString(profile?['displayName']) ??
+            _nonEmptyString(user.displayName) ??
+            _nonEmptyString(user.email) ??
+            'EventEase User';
+        final role = snapshot.hasError
+            ? 'Profile unavailable'
+            : snapshot.connectionState == ConnectionState.waiting &&
+                  profile == null
+            ? 'Loading profile…'
+            : _friendlyRole(profile?['role']);
+
+        return _userProfilePill(
+          name: name,
+          role: role,
+          photoUrl: _nonEmptyString(user.photoURL),
+        );
+      },
+    );
+  }
+
+  Widget _userProfilePill({
+    required String name,
+    required String role,
+    String? photoUrl,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.cardBorder),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: AppTheme.primaryDark,
+            backgroundImage: photoUrl == null ? null : NetworkImage(photoUrl),
+            child: photoUrl == null
+                ? Text(
+                    _initials(name),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )
+                : null,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const CircleAvatar(
-                  radius: 18,
-                  backgroundColor: AppTheme.primaryDark,
-                  child: Text('AD', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Alex Danvers',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.textPrimary,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        'Lead Organizer',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                    ],
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
                   ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  role,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.textSecondary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -465,6 +538,29 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
+  }
+
+  String? _nonEmptyString(Object? value) {
+    if (value is String && value.trim().isNotEmpty) return value.trim();
+    return null;
+  }
+
+  String _friendlyRole(Object? value) {
+    switch (value) {
+      case 'organizer':
+        return 'Event Organizer';
+      case 'attendee':
+        return 'Attendee';
+      default:
+        return 'Member';
+    }
+  }
+
+  String _initials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty || parts.first.isEmpty) return 'E';
+    if (parts.length == 1) return parts.first[0].toUpperCase();
+    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
   }
 
   Widget _sidebarItem(int index, String title, IconData icon, IconData activeIcon) {
