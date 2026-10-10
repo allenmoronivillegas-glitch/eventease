@@ -1,4 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
 import '../models/event_model.dart';
 import '../theme/app_theme.dart';
 import '../widgets/stat_card.dart';
@@ -36,12 +38,15 @@ class DashboardView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final int totalEvents = events.length;
-    final int totalRegistrations =
-        events.fold(0, (sum, item) => sum + item.registeredCount);
-    final int totalCheckedIn =
-        events.fold(0, (sum, item) => sum + item.checkedInCount);
-    final int liveEventsCount =
-        events.where((e) => e.status == 'Live').length;
+    final int totalRegistrations = events.fold(
+      0,
+      (sum, item) => sum + item.registeredCount,
+    );
+    final int totalCheckedIn = events.fold(
+      0,
+      (sum, item) => sum + item.checkedInCount,
+    );
+    final int liveEventsCount = events.where((e) => e.status == 'Live').length;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -59,21 +64,32 @@ class DashboardView extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
                           children: [
-                            const Text(
-                              'Organizer Dashboard',
-                              style: TextStyle(
-                                fontSize: 26,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.textPrimary,
+                            _profileAvatar(),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Organizer Dashboard',
+                                    style: TextStyle(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Welcome back! Here is what is happening across your events today.',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: AppTheme.textSecondary,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Welcome back! Here is what is happening across your events today.',
-                              style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
                             ),
                           ],
                         ),
@@ -151,8 +167,8 @@ class DashboardView extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF4338CA), Color(0xFF6366F1)],
+              gradient: LinearGradient(
+                colors: [AppTheme.primaryDark, AppTheme.primary],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
               ),
@@ -169,8 +185,11 @@ class DashboardView extends StatelessWidget {
                         color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.bolt_rounded,
-                          color: Colors.white, size: 28),
+                      child: const Icon(
+                        Icons.bolt_rounded,
+                        color: Colors.white,
+                        size: 28,
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -188,7 +207,10 @@ class DashboardView extends StatelessWidget {
                           SizedBox(height: 2),
                           Text(
                             'Fast badge scanning and urgent announcement dispatching are ready.',
-                            style: TextStyle(color: Colors.white70, fontSize: 13),
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                            ),
                           ),
                         ],
                       ),
@@ -212,6 +234,7 @@ class DashboardView extends StatelessWidget {
                     ],
                   );
                 }
+
                 return mainContent;
               },
             ),
@@ -225,9 +248,15 @@ class DashboardView extends StatelessWidget {
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(flex: 3, child: _buildActiveEventsSection(context)),
+                    Expanded(
+                      flex: 3,
+                      child: _buildActiveEventsSection(context),
+                    ),
                     const SizedBox(width: 24),
-                    Expanded(flex: 2, child: _buildRecentAnnouncementsSection(context)),
+                    Expanded(
+                      flex: 2,
+                      child: _buildRecentAnnouncementsSection(context),
+                    ),
                   ],
                 );
               } else {
@@ -243,6 +272,37 @@ class DashboardView extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _profileAvatar() {
+    final user = FirebaseAuth.instance.currentUser;
+    final displayName = (user?.displayName ?? '').trim();
+    final initials = displayName.isEmpty
+        ? (user?.email?.isNotEmpty == true
+              ? user!.email![0].toUpperCase()
+              : '?')
+        : displayName
+              .split(RegExp(r'\s+'))
+              .map((part) => part[0])
+              .take(2)
+              .join()
+              .toUpperCase();
+    final photoUrl = user?.photoURL;
+
+    return CircleAvatar(
+      radius: 24,
+      backgroundColor: AppTheme.primary,
+      backgroundImage: photoUrl == null ? null : NetworkImage(photoUrl),
+      child: photoUrl == null
+          ? Text(
+              initials,
+              style: TextStyle(
+                color: AppTheme.onPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            )
+          : null,
     );
   }
 
@@ -268,9 +328,8 @@ class DashboardView extends StatelessWidget {
           onPressed: () {
             showDialog(
               context: context,
-              builder: (ctx) => CreateEventDialog(
-                onEventCreated: onEventCreated,
-              ),
+              builder: (ctx) =>
+                  CreateEventDialog(onEventCreated: onEventCreated),
             );
           },
           icon: const Icon(Icons.add_rounded, size: 18),
@@ -292,7 +351,7 @@ class DashboardView extends StatelessWidget {
         );
       },
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface,
         foregroundColor: AppTheme.primaryDark,
       ),
       icon: const Icon(Icons.campaign, size: 18),
@@ -304,7 +363,7 @@ class DashboardView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.cardBorder),
       ),
@@ -314,7 +373,7 @@ class DashboardView extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Featured & Active Events',
                 style: TextStyle(
                   fontSize: 18,
@@ -352,7 +411,7 @@ class DashboardView extends StatelessWidget {
                         color: AppTheme.primaryLight,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.event_note, color: AppTheme.primary),
+                      child: Icon(Icons.event_note, color: AppTheme.primary),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -364,7 +423,7 @@ class DashboardView extends StatelessWidget {
                               Expanded(
                                 child: Text(
                                   event.title,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 14,
                                     color: AppTheme.textPrimary,
@@ -374,7 +433,9 @@ class DashboardView extends StatelessWidget {
                               ),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2),
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
                                   color: event.status == 'Live'
                                       ? AppTheme.successLight
@@ -397,7 +458,7 @@ class DashboardView extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             '${event.date} • ${event.location}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               color: AppTheme.textSecondary,
                             ),
@@ -410,7 +471,7 @@ class DashboardView extends StatelessWidget {
                             children: [
                               Text(
                                 '${event.registeredCount}/${event.totalCapacity} Attendees',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   color: AppTheme.primary,
@@ -418,7 +479,7 @@ class DashboardView extends StatelessWidget {
                               ),
                               Text(
                                 '${event.checkedInCount} Checked In',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
                                   color: AppTheme.textSecondary,
                                 ),
@@ -429,7 +490,10 @@ class DashboardView extends StatelessWidget {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                      icon: const Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 16,
+                      ),
                       onPressed: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
@@ -440,7 +504,8 @@ class DashboardView extends StatelessWidget {
                               schedules: schedules,
                               announcements: announcements,
                               onAttendeeRegistered: onAttendeeRegistered,
-                              onAttendeeCheckInToggled: onAttendeeCheckInToggled,
+                              onAttendeeCheckInToggled:
+                                  onAttendeeCheckInToggled,
                               onDataChanged: onDataChanged,
                             ),
                           ),
@@ -461,7 +526,7 @@ class DashboardView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.cardBorder),
       ),
@@ -471,7 +536,7 @@ class DashboardView extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Recent Broadcasts',
                 style: TextStyle(
                   fontSize: 18,
@@ -524,15 +589,17 @@ class DashboardView extends StatelessWidget {
                         ),
                         Text(
                           ann.timestamp,
-                          style: const TextStyle(
-                              fontSize: 11, color: AppTheme.textMuted),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textMuted,
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
                     Text(
                       ann.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                         color: AppTheme.textPrimary,
@@ -543,7 +610,7 @@ class DashboardView extends StatelessWidget {
                       ann.message,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         color: AppTheme.textSecondary,
                       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/event_model.dart';
 import '../theme/app_theme.dart';
 
@@ -60,7 +61,8 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
         registeredCount: 0,
         checkedInCount: 0,
         ticketPrice: double.tryParse(_priceController.text.trim()) ?? 0.0,
-        bannerImageUrl: 'https://picsum.photos/seed/${_titleController.text.hashCode}/900/400',
+        bannerImageUrl:
+            'https://picsum.photos/seed/${_titleController.text.hashCode}/900/400',
         status: 'Upcoming',
       );
 
@@ -80,7 +82,7 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface,
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 600, maxHeight: 750),
@@ -102,11 +104,13 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
                             color: AppTheme.primaryLight,
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(Icons.add_box_rounded,
-                              color: AppTheme.primary),
+                          child: Icon(
+                            Icons.add_box_rounded,
+                            color: AppTheme.primary,
+                          ),
                         ),
                         const SizedBox(width: 12),
-                        const Text(
+                        Text(
                           'Create New Event',
                           style: TextStyle(
                             fontSize: 20,
@@ -117,32 +121,38 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
                       ],
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close, color: AppTheme.textSecondary),
+                      icon: Icon(Icons.close, color: AppTheme.textSecondary),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
                 ),
                 const SizedBox(height: 6),
-                const Text(
+                Text(
                   'Fill in the details to publish your event to the attendee portal.',
                   style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
                 ),
-                const Divider(height: 28, color: AppTheme.cardBorder),
+                Divider(height: 28, color: AppTheme.cardBorder),
                 Expanded(
                   child: SingleChildScrollView(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Event Title *',
-                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                        const Text(
+                          'Event Title *',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: _titleController,
                           decoration: const InputDecoration(
                             hintText: 'e.g. AI & Cloud Architecture Summit',
                           ),
-                          validator: (v) =>
-                              v == null || v.isEmpty ? 'Title is required' : null,
+                          validator: (v) => v == null || v.isEmpty
+                              ? 'Title is required'
+                              : null,
                         ),
                         const SizedBox(height: 16),
                         LayoutBuilder(
@@ -151,17 +161,23 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
                             final categoryField = Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Category',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w600, fontSize: 13)),
+                                const Text(
+                                  'Category',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                ),
                                 const SizedBox(height: 6),
                                 DropdownButtonFormField<String>(
                                   initialValue: _selectedCategory,
                                   items: _categories
-                                      .map((c) => DropdownMenuItem(
-                                            value: c,
-                                            child: Text(c),
-                                          ))
+                                      .map(
+                                        (c) => DropdownMenuItem(
+                                          value: c,
+                                          child: Text(c),
+                                        ),
+                                      )
                                       .toList(),
                                   onChanged: (val) =>
                                       setState(() => _selectedCategory = val!),
@@ -173,9 +189,13 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
                             final capacityField = Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Capacity *',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w600, fontSize: 13)),
+                                const Text(
+                                  'Capacity *',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                ),
                                 const SizedBox(height: 6),
                                 TextFormField(
                                   controller: _capacityController,
@@ -183,8 +203,9 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
                                   decoration: const InputDecoration(
                                     hintText: 'e.g. 500',
                                   ),
-                                  validator: (v) =>
-                                      v == null || v.isEmpty ? 'Required' : null,
+                                  validator: (v) => v == null || v.isEmpty
+                                      ? 'Required'
+                                      : null,
                                 ),
                               ],
                             );
@@ -214,15 +235,22 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
                             final dateField = Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Date *',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w600, fontSize: 13)),
+                                const Text(
+                                  'Date *',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                ),
                                 const SizedBox(height: 6),
                                 TextFormField(
                                   controller: _dateController,
                                   decoration: const InputDecoration(
                                     hintText: 'e.g. Oct 24, 2026',
-                                    prefixIcon: Icon(Icons.calendar_today, size: 18),
+                                    prefixIcon: Icon(
+                                      Icons.calendar_today,
+                                      size: 18,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -231,15 +259,22 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
                             final timeField = Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Time *',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w600, fontSize: 13)),
+                                const Text(
+                                  'Time *',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                ),
                                 const SizedBox(height: 6),
                                 TextFormField(
                                   controller: _timeController,
                                   decoration: const InputDecoration(
                                     hintText: 'e.g. 09:00 AM - 05:00 PM',
-                                    prefixIcon: Icon(Icons.access_time, size: 18),
+                                    prefixIcon: Icon(
+                                      Icons.access_time,
+                                      size: 18,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -264,30 +299,49 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
                           },
                         ),
                         const SizedBox(height: 16),
-                        const Text('Location / Venue *',
-                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                        const Text(
+                          'Location / Venue *',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: _locationController,
                           decoration: const InputDecoration(
                             hintText: 'e.g. Moscone Center, San Francisco or Virtual Link',
-                            prefixIcon: Icon(Icons.location_on_outlined, size: 18),
+                            prefixIcon: Icon(
+                              Icons.location_on_outlined,
+                              size: 18,
+                            ),
                           ),
-                          validator: (v) =>
-                              v == null || v.isEmpty ? 'Location is required' : null,
+                          validator: (v) => v == null || v.isEmpty
+                              ? 'Location is required'
+                              : null,
                         ),
                         const SizedBox(height: 14),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: const Text('Is this a virtual or hybrid event?',
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                          title: const Text(
+                            'Is this a virtual or hybrid event?',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                           value: _isVirtual,
                           activeThumbColor: AppTheme.primary,
                           onChanged: (val) => setState(() => _isVirtual = val),
                         ),
                         const SizedBox(height: 10),
-                        const Text('Description',
-                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                        const Text(
+                          'Description',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: _descController,

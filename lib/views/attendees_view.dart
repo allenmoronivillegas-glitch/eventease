@@ -39,7 +39,9 @@ class _AttendeesViewState extends State<AttendeesView> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Attendee?'),
-        content: Text('Delete ${attendee.name} (${attendee.email}) from this event?'),
+        content: Text(
+          'Delete ${attendee.name} (${attendee.email}) from this event?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -53,7 +55,9 @@ class _AttendeesViewState extends State<AttendeesView> {
       ),
     );
 
-    if (confirmed != true || !mounted || _deletingAttendeeIds.contains(attendee.id)) {
+    if (confirmed != true ||
+        !mounted ||
+        _deletingAttendeeIds.contains(attendee.id)) {
       return;
     }
     setState(() => _deletingAttendeeIds.add(attendee.id));
@@ -62,12 +66,14 @@ class _AttendeesViewState extends State<AttendeesView> {
       await _firestoreService.deleteAttendee(attendee.id);
       if (!mounted) return;
       widget.onDataChanged();
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('${attendee.name} was deleted.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('${attendee.name} was deleted.')));
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Could not delete attendee: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not delete attendee: $error')),
+      );
     } finally {
       if (mounted) setState(() => _deletingAttendeeIds.remove(attendee.id));
     }
@@ -80,7 +86,8 @@ class _AttendeesViewState extends State<AttendeesView> {
           att.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           att.email.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           att.id.toLowerCase().contains(_searchQuery.toLowerCase());
-      final matchesTicket = _filterTicket == 'All' || att.ticketType == _filterTicket;
+      final matchesTicket =
+          _filterTicket == 'All' || att.ticketType == _filterTicket;
       final matchesStatus =
           _filterStatus == 'All' ||
           (_filterStatus == 'Checked In' && att.isCheckedIn) ||
@@ -101,7 +108,7 @@ class _AttendeesViewState extends State<AttendeesView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Attendees',
                       style: TextStyle(
                         fontSize: 24,
@@ -112,7 +119,10 @@ class _AttendeesViewState extends State<AttendeesView> {
                     const SizedBox(height: 4),
                     Text(
                       'Manage your registrations.',
-                      style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -149,13 +159,9 @@ class _AttendeesViewState extends State<AttendeesView> {
 
               final tierDropdown = DropdownButtonFormField<String>(
                 initialValue: _filterTicket,
-                items: [
-                  'All',
-                  'VIP',
-                  'General',
-                  'Speaker',
-                  'Student',
-                ].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                items: ['All', 'VIP', 'General', 'Speaker', 'Student']
+                    .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                    .toList(),
                 onChanged: (val) {
                   if (val != null) setState(() => _filterTicket = val);
                 },
@@ -164,11 +170,9 @@ class _AttendeesViewState extends State<AttendeesView> {
 
               final statusDropdown = DropdownButtonFormField<String>(
                 initialValue: _filterStatus,
-                items: [
-                  'All',
-                  'Checked In',
-                  'Pending',
-                ].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                items: ['All', 'Checked In', 'Pending']
+                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                    .toList(),
                 onChanged: (val) {
                   if (val != null) setState(() => _filterStatus = val);
                 },
@@ -178,7 +182,7 @@ class _AttendeesViewState extends State<AttendeesView> {
               return Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppTheme.surface,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: AppTheme.cardBorder),
                 ),
@@ -221,7 +225,7 @@ class _AttendeesViewState extends State<AttendeesView> {
           // Attendees List
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppTheme.surface,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppTheme.cardBorder),
             ),
@@ -235,7 +239,7 @@ class _AttendeesViewState extends State<AttendeesView> {
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: filtered.length,
                     separatorBuilder: (_, _) =>
-                        const Divider(height: 1, color: AppTheme.cardBorder),
+                        Divider(height: 1, color: AppTheme.cardBorder),
                     itemBuilder: (context, index) {
                       final att = filtered[index];
                       final event = widget.events.cast<EventItem?>().firstWhere(
@@ -244,13 +248,16 @@ class _AttendeesViewState extends State<AttendeesView> {
                       );
 
                       return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 8,
+                        ),
                         leading: CircleAvatar(
                           radius: 20,
                           backgroundColor: AppTheme.primaryLight,
                           child: Text(
                             att.name.isNotEmpty ? att.name[0] : '?',
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppTheme.primary,
                               fontWeight: FontWeight.bold,
                             ),
@@ -261,7 +268,7 @@ class _AttendeesViewState extends State<AttendeesView> {
                             Expanded(
                               child: Text(
                                 att.name,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15,
                                   color: AppTheme.textPrimary,
@@ -271,10 +278,13 @@ class _AttendeesViewState extends State<AttendeesView> {
                             ),
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: att.ticketType == 'VIP'
-                                    ? const Color(0xFFFEF3C7)
+                                    ? AppTheme.warningLight
                                     : AppTheme.background,
                                 borderRadius: BorderRadius.circular(6),
                               ),
@@ -284,7 +294,7 @@ class _AttendeesViewState extends State<AttendeesView> {
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
                                   color: att.ticketType == 'VIP'
-                                      ? const Color(0xFFD97706)
+                                      ? AppTheme.warning
                                       : AppTheme.textSecondary,
                                 ),
                               ),
@@ -301,11 +311,18 @@ class _AttendeesViewState extends State<AttendeesView> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                              tooltip: att.isCheckedIn ? 'Check out' : 'Check in',
-                              onPressed: () => widget.onAttendeeCheckInToggled(att),
+                              tooltip: att.isCheckedIn
+                                  ? 'Check out'
+                                  : 'Check in',
+                              onPressed: () =>
+                                  widget.onAttendeeCheckInToggled(att),
                               icon: Icon(
-                                att.isCheckedIn ? Icons.check_circle : Icons.radio_button_unchecked,
-                                color: att.isCheckedIn ? AppTheme.success : AppTheme.primary,
+                                att.isCheckedIn
+                                    ? Icons.check_circle
+                                    : Icons.radio_button_unchecked,
+                                color: att.isCheckedIn
+                                    ? AppTheme.success
+                                    : AppTheme.primary,
                               ),
                             ),
                             IconButton(
@@ -317,7 +334,9 @@ class _AttendeesViewState extends State<AttendeesView> {
                                   ? const SizedBox(
                                       width: 20,
                                       height: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
                                     )
                                   : const Icon(Icons.delete_outline),
                               color: AppTheme.danger,

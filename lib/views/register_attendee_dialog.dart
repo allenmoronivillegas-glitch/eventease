@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/event_model.dart';
 import '../theme/app_theme.dart';
 
@@ -32,7 +33,8 @@ class _RegisterAttendeeDialogState extends State<RegisterAttendeeDialog> {
   @override
   void initState() {
     super.initState();
-    _selectedEventId = widget.initialEventId ??
+    _selectedEventId =
+        widget.initialEventId ??
         (widget.events.isNotEmpty ? widget.events.first.id : '');
   }
 
@@ -73,7 +75,7 @@ class _RegisterAttendeeDialogState extends State<RegisterAttendeeDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface,
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520),
@@ -96,11 +98,13 @@ class _RegisterAttendeeDialogState extends State<RegisterAttendeeDialog> {
                             color: AppTheme.primaryLight,
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(Icons.person_add_alt_1_rounded,
-                              color: AppTheme.primary),
+                          child: Icon(
+                            Icons.person_add_alt_1_rounded,
+                            color: AppTheme.primary,
+                          ),
                         ),
                         const SizedBox(width: 12),
-                        const Text(
+                        Text(
                           'Register Attendee',
                           style: TextStyle(
                             fontSize: 20,
@@ -111,27 +115,33 @@ class _RegisterAttendeeDialogState extends State<RegisterAttendeeDialog> {
                       ],
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close, color: AppTheme.textSecondary),
+                      icon: Icon(Icons.close, color: AppTheme.textSecondary),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
                 ),
                 const SizedBox(height: 6),
-                const Text(
+                Text(
                   'Issue a new badge and register attendee into EventEase system.',
                   style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
                 ),
-                const Divider(height: 28, color: AppTheme.cardBorder),
-                const Text('Select Event *',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                Divider(height: 28, color: AppTheme.cardBorder),
+                const Text(
+                  'Select Event *',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
-                  initialValue: _selectedEventId.isNotEmpty ? _selectedEventId : null,
+                  initialValue: _selectedEventId.isNotEmpty
+                      ? _selectedEventId
+                      : null,
                   items: widget.events
-                      .map((e) => DropdownMenuItem(
-                            value: e.id,
-                            child: Text(e.title, overflow: TextOverflow.ellipsis),
-                          ))
+                      .map(
+                        (e) => DropdownMenuItem(
+                          value: e.id,
+                          child: Text(e.title, overflow: TextOverflow.ellipsis),
+                        ),
+                      )
                       .toList(),
                   onChanged: (val) {
                     if (val != null) setState(() => _selectedEventId = val);
@@ -139,8 +149,10 @@ class _RegisterAttendeeDialogState extends State<RegisterAttendeeDialog> {
                   decoration: const InputDecoration(),
                 ),
                 const SizedBox(height: 16),
-                const Text('Full Name *',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                const Text(
+                  'Full Name *',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
                 const SizedBox(height: 6),
                 TextFormField(
                   controller: _nameController,
@@ -148,8 +160,9 @@ class _RegisterAttendeeDialogState extends State<RegisterAttendeeDialog> {
                     hintText: 'e.g. Jessica Taylor',
                     prefixIcon: Icon(Icons.badge_outlined, size: 18),
                   ),
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Attendee name is required' : null,
+                  validator: (v) => v == null || v.isEmpty
+                      ? 'Attendee name is required'
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 LayoutBuilder(
@@ -158,9 +171,13 @@ class _RegisterAttendeeDialogState extends State<RegisterAttendeeDialog> {
                     final emailField = Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Email Address *',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 13)),
+                        const Text(
+                          'Email Address *',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: _emailController,
@@ -169,8 +186,9 @@ class _RegisterAttendeeDialogState extends State<RegisterAttendeeDialog> {
                             hintText: 'name@company.com',
                             prefixIcon: Icon(Icons.email_outlined, size: 18),
                           ),
-                          validator: (v) =>
-                              v == null || !v.contains('@') ? 'Valid email required' : null,
+                          validator: (v) => v == null || !v.contains('@')
+                              ? 'Valid email required'
+                              : null,
                         ),
                       ],
                     );
@@ -178,17 +196,21 @@ class _RegisterAttendeeDialogState extends State<RegisterAttendeeDialog> {
                     final ticketField = Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Ticket Pass',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 13)),
+                        const Text(
+                          'Ticket Pass',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
                         const SizedBox(height: 6),
                         DropdownButtonFormField<String>(
                           initialValue: _selectedTicket,
                           items: _ticketTypes
-                              .map((t) => DropdownMenuItem(
-                                    value: t,
-                                    child: Text(t),
-                                  ))
+                              .map(
+                                (t) =>
+                                    DropdownMenuItem(value: t, child: Text(t)),
+                              )
                               .toList(),
                           onChanged: (val) =>
                               setState(() => _selectedTicket = val!),
@@ -218,8 +240,10 @@ class _RegisterAttendeeDialogState extends State<RegisterAttendeeDialog> {
                   },
                 ),
                 const SizedBox(height: 16),
-                const Text('Contact Phone',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                const Text(
+                  'Contact Phone',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
                 const SizedBox(height: 6),
                 TextFormField(
                   controller: _phoneController,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../models/event_model.dart';
+import '../services/firestore_service.dart';
 import '../theme/app_theme.dart';
 import 'register_attendee_dialog.dart';
 import 'send_announcement_dialog.dart';
@@ -32,6 +34,7 @@ class EventDetailsView extends StatefulWidget {
 
 class _EventDetailsViewState extends State<EventDetailsView>
     with SingleTickerProviderStateMixin {
+  final FirestoreService _firestoreService = FirestoreService();
   late TabController _tabController;
   String _attendeeSearchQuery = '';
 
@@ -47,7 +50,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
     super.dispose();
   }
 
-  EventItem get _currentEvent => 
+  EventItem get _currentEvent =>
       widget.events.firstWhere((e) => e.id == widget.eventId);
 
   void _openCheckInDialog() {
@@ -55,8 +58,10 @@ class _EventDetailsViewState extends State<EventDetailsView>
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Row(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
             children: [
               Icon(Icons.qr_code_scanner_rounded, color: AppTheme.primary),
               SizedBox(width: 10),
@@ -74,20 +79,27 @@ class _EventDetailsViewState extends State<EventDetailsView>
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: AppTheme.cardBorder, width: 2),
                 ),
-                child: const Column(
+                child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.qr_code_2_rounded, size: 100, color: AppTheme.primaryDark),
+                    Icon(
+                      Icons.qr_code_2_rounded,
+                      size: 100,
+                      color: AppTheme.primaryDark,
+                    ),
                     SizedBox(height: 8),
                     Text(
                       'Ready to Scan Pass',
-                      style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Hold attendee QR badge in front of camera or select attendee directly in Attendee tab.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
@@ -125,7 +137,9 @@ class _EventDetailsViewState extends State<EventDetailsView>
               children: [
                 TextField(
                   controller: titleCtrl,
-                  decoration: const InputDecoration(labelText: 'Session Title *'),
+                  decoration: const InputDecoration(
+                    labelText: 'Session Title *',
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -135,7 +149,9 @@ class _EventDetailsViewState extends State<EventDetailsView>
                 const SizedBox(height: 12),
                 TextField(
                   controller: speakerCtrl,
-                  decoration: const InputDecoration(labelText: 'Speaker / Facilitator'),
+                  decoration: const InputDecoration(
+                    labelText: 'Speaker / Facilitator',
+                  ),
                 ),
                 const SizedBox(height: 12),
                 LayoutBuilder(
@@ -145,12 +161,16 @@ class _EventDetailsViewState extends State<EventDetailsView>
                         children: [
                           TextField(
                             controller: roomCtrl,
-                            decoration: const InputDecoration(labelText: 'Track / Room'),
+                            decoration: const InputDecoration(
+                              labelText: 'Track / Room',
+                            ),
                           ),
                           const SizedBox(height: 12),
                           TextField(
                             controller: tagCtrl,
-                            decoration: const InputDecoration(labelText: 'Category Tag'),
+                            decoration: const InputDecoration(
+                              labelText: 'Category Tag',
+                            ),
                           ),
                         ],
                       );
@@ -160,14 +180,18 @@ class _EventDetailsViewState extends State<EventDetailsView>
                         Expanded(
                           child: TextField(
                             controller: roomCtrl,
-                            decoration: const InputDecoration(labelText: 'Track / Room'),
+                            decoration: const InputDecoration(
+                              labelText: 'Track / Room',
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: TextField(
                             controller: tagCtrl,
-                            decoration: const InputDecoration(labelText: 'Category Tag'),
+                            decoration: const InputDecoration(
+                              labelText: 'Category Tag',
+                            ),
                           ),
                         ),
                       ],
@@ -184,22 +208,41 @@ class _EventDetailsViewState extends State<EventDetailsView>
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              if (titleCtrl.text.trim().isNotEmpty) {
-                widget.schedules.add(
-                  ScheduleItem(
-                    id: 'SCH-${DateTime.now().millisecondsSinceEpoch}',
-                    eventId: widget.eventId,
-                    time: timeCtrl.text.trim(),
-                    title: titleCtrl.text.trim(),
-                    speakerName: speakerCtrl.text.trim().isEmpty ? 'TBA' : speakerCtrl.text.trim(),
-                    roomOrTrack: roomCtrl.text.trim().isEmpty ? 'Main Hall' : roomCtrl.text.trim(),
-                    tag: tagCtrl.text.trim().isEmpty ? 'General' : tagCtrl.text.trim(),
+            onPressed: () async {
+              final title = titleCtrl.text.trim();
+              if (title.isEmpty) return;
+              final schedule = ScheduleItem(
+                id: 'SCH-${DateTime.now().millisecondsSinceEpoch}',
+                eventId: widget.eventId,
+                time: timeCtrl.text.trim(),
+                title: title,
+                speakerName: speakerCtrl.text.trim().isEmpty
+                    ? 'TBA'
+                    : speakerCtrl.text.trim(),
+                roomOrTrack: roomCtrl.text.trim().isEmpty
+                    ? 'Main Hall'
+                    : roomCtrl.text.trim(),
+                tag: tagCtrl.text.trim().isEmpty
+                    ? 'General'
+                    : tagCtrl.text.trim(),
+              );
+              try {
+                await _firestoreService.createSchedule(schedule);
+                if (!ctx.mounted || !mounted) return;
+                Navigator.of(ctx).pop();
+                widget.onDataChanged();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Schedule item saved successfully.'),
                   ),
                 );
-                widget.onDataChanged();
-                setState(() {});
-                Navigator.of(ctx).pop();
+              } catch (error) {
+                if (!ctx.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Could not save schedule item: $error'),
+                  ),
+                );
               }
             },
             child: const Text('Add Item'),
@@ -212,13 +255,16 @@ class _EventDetailsViewState extends State<EventDetailsView>
   @override
   Widget build(BuildContext context) {
     final event = _currentEvent;
-    
-    final eventAttendees =
-        widget.attendees.where((a) => a.eventId == event.id).toList();
-    final eventSchedules =
-        widget.schedules.where((s) => s.eventId == event.id).toList();
-    final eventAnnouncements =
-        widget.announcements.where((a) => a.eventId == event.id).toList();
+
+    final eventAttendees = widget.attendees
+        .where((a) => a.eventId == event.id)
+        .toList();
+    final eventSchedules = widget.schedules
+        .where((s) => s.eventId == event.id)
+        .toList();
+    final eventAnnouncements = widget.announcements
+        .where((a) => a.eventId == event.id)
+        .toList();
 
     final filteredAttendees = eventAttendees.where((a) {
       final query = _attendeeSearchQuery.toLowerCase();
@@ -241,12 +287,12 @@ class _EventDetailsViewState extends State<EventDetailsView>
         actions: [
           IconButton(
             tooltip: 'Live Check-In Scanner',
-            icon: const Icon(Icons.qr_code_scanner_rounded, color: AppTheme.primary),
+            icon: Icon(Icons.qr_code_scanner_rounded, color: AppTheme.primary),
             onPressed: _openCheckInDialog,
           ),
           IconButton(
             tooltip: 'Broadcast Announcement',
-            icon: const Icon(Icons.campaign_rounded, color: AppTheme.accent),
+            icon: Icon(Icons.campaign_rounded, color: AppTheme.accent),
             onPressed: () {
               showDialog(
                 context: context,
@@ -264,7 +310,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
           ),
           IconButton(
             tooltip: 'Register Attendee',
-            icon: const Icon(Icons.person_add_alt_1_rounded, color: AppTheme.success),
+            icon: Icon(Icons.person_add_alt_1_rounded, color: AppTheme.success),
             onPressed: () {
               showDialog(
                 context: context,
@@ -328,7 +374,11 @@ class _EventDetailsViewState extends State<EventDetailsView>
   }
 
   Widget _buildOverviewTab(
-      EventItem event, int checkInRate, List<AttendeeItem> attendees, List<ScheduleItem> schedules) {
+    EventItem event,
+    int checkInRate,
+    List<AttendeeItem> attendees,
+    List<ScheduleItem> schedules,
+  ) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -339,8 +389,8 @@ class _EventDetailsViewState extends State<EventDetailsView>
             width: double.infinity,
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF312E81), Color(0xFF4F46E5), Color(0xFF06B6D4)],
+              gradient: LinearGradient(
+                colors: [AppTheme.primaryDark, AppTheme.primary],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -361,7 +411,10 @@ class _EventDetailsViewState extends State<EventDetailsView>
                   runSpacing: 8,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 5,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(20),
@@ -377,7 +430,10 @@ class _EventDetailsViewState extends State<EventDetailsView>
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: event.status == 'Live'
                             ? AppTheme.success
@@ -454,7 +510,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
               final isWide = constraints.maxWidth > 700;
               final isNarrow = constraints.maxWidth < 450;
               final crossCount = isWide ? 4 : (isNarrow ? 1 : 2);
-              
+
               return GridView.count(
                 crossAxisCount: crossCount,
                 crossAxisSpacing: 16,
@@ -467,7 +523,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
                     'Total Capacity',
                     '${event.totalCapacity}',
                     Icons.airline_seat_recline_normal,
-                    Colors.blue,
+                    AppTheme.textSecondary,
                   ),
                   _metricCard(
                     'Registered',
@@ -497,7 +553,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppTheme.surface,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppTheme.cardBorder),
             ),
@@ -511,11 +567,14 @@ class _EventDetailsViewState extends State<EventDetailsView>
                   children: [
                     const Text(
                       'Attendance & Venue Capacity Fulfillment',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
                     ),
                     Text(
                       '${event.registeredCount} / ${event.totalCapacity} (${(event.registeredCount / event.totalCapacity * 100).toInt()}%)',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: AppTheme.primary,
                       ),
@@ -529,7 +588,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
                     value: event.registeredCount / event.totalCapacity,
                     minHeight: 12,
                     backgroundColor: AppTheme.cardBorder,
-                    valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -539,14 +598,21 @@ class _EventDetailsViewState extends State<EventDetailsView>
                     Expanded(
                       child: Text(
                         '${event.totalCapacity - event.registeredCount} spots remaining',
-                        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textSecondary,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(width: 12),
                     Text(
                       '${event.checkedInCount} checked-in',
-                      style: const TextStyle(fontSize: 12, color: AppTheme.success, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.success,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -564,10 +630,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
       children: [
         Icon(icon, size: 16, color: Colors.white70),
         const SizedBox(width: 8),
-        Text(
-          text,
-          style: const TextStyle(color: Colors.white, fontSize: 13),
-        ),
+        Text(text, style: const TextStyle(color: Colors.white, fontSize: 13)),
       ],
     );
   }
@@ -576,7 +639,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.cardBorder),
       ),
@@ -591,7 +654,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                  style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -600,7 +663,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
           const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: AppTheme.textPrimary,
@@ -624,7 +687,8 @@ class _EventDetailsViewState extends State<EventDetailsView>
                     hintText: 'Search attendee...',
                     prefixIcon: Icon(Icons.search, size: 20),
                   ),
-                  onChanged: (val) => setState(() => _attendeeSearchQuery = val),
+                  onChanged: (val) =>
+                      setState(() => _attendeeSearchQuery = val),
                 ),
               ),
               const SizedBox(width: 14),
@@ -653,15 +717,19 @@ class _EventDetailsViewState extends State<EventDetailsView>
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.person_search_outlined,
-                            size: 64, color: AppTheme.textMuted),
+                        Icon(
+                          Icons.person_search_outlined,
+                          size: 64,
+                          color: AppTheme.textMuted,
+                        ),
                         const SizedBox(height: 12),
-                        const Text(
+                        Text(
                           'No attendees found',
                           style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.textSecondary),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -674,7 +742,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
                       return Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppTheme.surface,
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(color: AppTheme.cardBorder),
                         ),
@@ -685,7 +753,9 @@ class _EventDetailsViewState extends State<EventDetailsView>
                               foregroundColor: AppTheme.primary,
                               child: Text(
                                 att.name.isNotEmpty ? att.name[0] : '?',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 16),
@@ -698,7 +768,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
                                       Expanded(
                                         child: Text(
                                           att.name,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 15,
                                             color: AppTheme.textPrimary,
@@ -709,14 +779,18 @@ class _EventDetailsViewState extends State<EventDetailsView>
                                       const SizedBox(width: 8),
                                       Container(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 2),
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: att.ticketType == 'VIP'
                                               ? const Color(0xFFFEF3C7)
                                               : att.ticketType == 'Speaker'
-                                                  ? const Color(0xFFEDE9FE)
-                                                  : AppTheme.background,
-                                          borderRadius: BorderRadius.circular(6),
+                                              ? const Color(0xFFEDE9FE)
+                                              : AppTheme.background,
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
                                         ),
                                         child: Text(
                                           att.ticketType,
@@ -726,8 +800,8 @@ class _EventDetailsViewState extends State<EventDetailsView>
                                             color: att.ticketType == 'VIP'
                                                 ? const Color(0xFFD97706)
                                                 : att.ticketType == 'Speaker'
-                                                    ? AppTheme.primary
-                                                    : AppTheme.textSecondary,
+                                                ? AppTheme.primary
+                                                : AppTheme.textSecondary,
                                           ),
                                         ),
                                       ),
@@ -736,8 +810,10 @@ class _EventDetailsViewState extends State<EventDetailsView>
                                   const SizedBox(height: 4),
                                   Text(
                                     '${att.email} • ${att.phone}',
-                                    style: const TextStyle(
-                                        fontSize: 12, color: AppTheme.textSecondary),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppTheme.textSecondary,
+                                    ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
@@ -754,7 +830,9 @@ class _EventDetailsViewState extends State<EventDetailsView>
                                 att.isCheckedIn
                                     ? Icons.check_circle
                                     : Icons.radio_button_unchecked,
-                                color: att.isCheckedIn ? AppTheme.success : AppTheme.primary,
+                                color: att.isCheckedIn
+                                    ? AppTheme.success
+                                    : AppTheme.primary,
                               ),
                             ),
                           ],
@@ -802,7 +880,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
                       return Container(
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppTheme.surface,
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(color: AppTheme.cardBorder),
                         ),
@@ -811,14 +889,16 @@ class _EventDetailsViewState extends State<EventDetailsView>
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 6),
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppTheme.primaryLight,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 item.time,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 11,
                                   color: AppTheme.primary,
@@ -835,7 +915,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
                                       Expanded(
                                         child: Text(
                                           item.title,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 15,
                                             fontWeight: FontWeight.bold,
                                             color: AppTheme.textPrimary,
@@ -844,18 +924,24 @@ class _EventDetailsViewState extends State<EventDetailsView>
                                       ),
                                       Container(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 3),
+                                          horizontal: 8,
+                                          vertical: 3,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: AppTheme.background,
-                                          borderRadius: BorderRadius.circular(6),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
                                           border: Border.all(
-                                              color: AppTheme.cardBorder),
+                                            color: AppTheme.cardBorder,
+                                          ),
                                         ),
                                         child: Text(
                                           item.tag,
-                                          style: const TextStyle(
-                                              fontSize: 11,
-                                              color: AppTheme.textSecondary),
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: AppTheme.textSecondary,
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -868,15 +954,19 @@ class _EventDetailsViewState extends State<EventDetailsView>
                                       Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          const Icon(Icons.person_pin_circle_outlined,
-                                              size: 14, color: AppTheme.textMuted),
+                                          Icon(
+                                            Icons.person_pin_circle_outlined,
+                                            size: 14,
+                                            color: AppTheme.textMuted,
+                                          ),
                                           const SizedBox(width: 4),
                                           Flexible(
                                             child: Text(
                                               item.speakerName,
-                                              style: const TextStyle(
-                                                  fontSize: 12,
-                                                  color: AppTheme.textSecondary),
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: AppTheme.textSecondary,
+                                              ),
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
@@ -885,15 +975,19 @@ class _EventDetailsViewState extends State<EventDetailsView>
                                       Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          const Icon(Icons.room_outlined,
-                                              size: 14, color: AppTheme.textMuted),
+                                          Icon(
+                                            Icons.room_outlined,
+                                            size: 14,
+                                            color: AppTheme.textMuted,
+                                          ),
                                           const SizedBox(width: 4),
                                           Flexible(
                                             child: Text(
                                               item.roomOrTrack,
-                                              style: const TextStyle(
-                                                  fontSize: 12,
-                                                  color: AppTheme.textSecondary),
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: AppTheme.textSecondary,
+                                              ),
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
@@ -953,8 +1047,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
           const SizedBox(height: 16),
           Expanded(
             child: announcements.isEmpty
-                ? const Center(
-                    child: Text('No announcements yet.'))
+                ? const Center(child: Text('No announcements yet.'))
                 : ListView.separated(
                     itemCount: announcements.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 12),
@@ -964,7 +1057,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
                       return Container(
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppTheme.surface,
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
                             color: isUrgent
@@ -982,7 +1075,9 @@ class _EventDetailsViewState extends State<EventDetailsView>
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 3),
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: isUrgent
                                         ? AppTheme.dangerLight
@@ -1002,14 +1097,14 @@ class _EventDetailsViewState extends State<EventDetailsView>
                                 ),
                                 Text(
                                   'Target: ${a.sentTo}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 12,
                                     color: AppTheme.textSecondary,
                                   ),
                                 ),
                                 Text(
                                   a.timestamp,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 12,
                                     color: AppTheme.textMuted,
                                   ),
@@ -1019,7 +1114,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
                             const SizedBox(height: 10),
                             Text(
                               a.title,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: AppTheme.textPrimary,
@@ -1028,7 +1123,7 @@ class _EventDetailsViewState extends State<EventDetailsView>
                             const SizedBox(height: 6),
                             Text(
                               a.message,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 color: AppTheme.textSecondary,
                                 height: 1.4,

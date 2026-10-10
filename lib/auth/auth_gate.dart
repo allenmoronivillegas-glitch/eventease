@@ -32,11 +32,12 @@ class _AuthGateState extends State<AuthGate> {
 
   @override
   Widget build(BuildContext context) {
+    Theme.of(context);
     return StreamBuilder<User?>(
       stream: _authStateChanges,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
+          return Scaffold(
             backgroundColor: AppTheme.background,
             body: Center(
               child: CircularProgressIndicator(color: AppTheme.primary),
@@ -162,7 +163,7 @@ class _AuthLoadingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: AppTheme.background,
       body: Center(child: CircularProgressIndicator(color: AppTheme.primary)),
     );
@@ -187,7 +188,7 @@ class _AuthErrorScreen extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
+                Icon(
                   Icons.error_outline_rounded,
                   size: 42,
                   color: AppTheme.textSecondary,
@@ -196,7 +197,7 @@ class _AuthErrorScreen extends StatelessWidget {
                 Text(
                   message,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppTheme.textSecondary),
+                  style: TextStyle(color: AppTheme.textSecondary),
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(

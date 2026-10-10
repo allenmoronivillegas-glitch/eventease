@@ -71,8 +71,9 @@ class _EventsViewState extends State<EventsView> {
       await _firestoreService.deleteEvent(event.id);
       if (!mounted) return;
       widget.onDataChanged();
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('"${event.title}" was deleted.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('"${event.title}" was deleted.')));
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -94,7 +95,8 @@ class _EventsViewState extends State<EventsView> {
     final categories = ['All', 'Technology', 'Design', 'Business', 'Developer'];
 
     final filteredEvents = widget.events.where((event) {
-      final matchesCat = _filterCategory == 'All' || event.category == _filterCategory;
+      final matchesCat =
+          _filterCategory == 'All' || event.category == _filterCategory;
       final matchesSearch =
           event.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           event.location.toLowerCase().contains(_searchQuery.toLowerCase());
@@ -114,7 +116,7 @@ class _EventsViewState extends State<EventsView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Events Directory',
                       style: TextStyle(
                         fontSize: 24,
@@ -125,7 +127,10 @@ class _EventsViewState extends State<EventsView> {
                     const SizedBox(height: 4),
                     Text(
                       'Manage your upcoming events.',
-                      style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -135,7 +140,9 @@ class _EventsViewState extends State<EventsView> {
                 onPressed: () {
                   showDialog(
                     context: context,
-                    builder: (ctx) => CreateEventDialog(onEventCreated: widget.onEventCreated),
+                    builder: (ctx) => CreateEventDialog(
+                      onEventCreated: widget.onEventCreated,
+                    ),
                   );
                 },
                 child: const Icon(Icons.add, size: 20),
@@ -158,25 +165,36 @@ class _EventsViewState extends State<EventsView> {
 
               final categoryDropdown = DropdownButtonFormField<String>(
                 initialValue: _filterCategory,
-                items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                items: categories
+                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .toList(),
                 onChanged: (val) {
                   if (val != null) setState(() => _filterCategory = val);
                 },
                 decoration: const InputDecoration(
                   labelText: 'Category',
-                  contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
                 ),
               );
 
               return Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppTheme.surface,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: AppTheme.cardBorder),
                 ),
                 child: isNarrow
-                    ? Column(children: [searchField, const SizedBox(height: 12), categoryDropdown])
+                    ? Column(
+                        children: [
+                          searchField,
+                          const SizedBox(height: 12),
+                          categoryDropdown,
+                        ],
+                      )
                     : Row(
                         children: [
                           Expanded(flex: 2, child: searchField),
@@ -205,17 +223,24 @@ class _EventsViewState extends State<EventsView> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(40),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppTheme.surface,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: AppTheme.cardBorder),
                   ),
                   child: Column(
                     children: [
-                      Icon(Icons.event_busy, size: 50, color: AppTheme.textMuted),
+                      Icon(
+                        Icons.event_busy,
+                        size: 50,
+                        color: AppTheme.textMuted,
+                      ),
                       const SizedBox(height: 12),
                       const Text(
                         'No events found',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -251,7 +276,7 @@ class _EventsViewState extends State<EventsView> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppTheme.cardBorder),
         boxShadow: [
@@ -269,7 +294,9 @@ class _EventsViewState extends State<EventsView> {
           Container(
             height: 110,
             decoration: BoxDecoration(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(18),
+              ),
               gradient: LinearGradient(
                 colors: [
                   AppTheme.primary.withValues(alpha: 0.85),
@@ -289,7 +316,10 @@ class _EventsViewState extends State<EventsView> {
                   runSpacing: 4,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(14),
@@ -304,7 +334,10 @@ class _EventsViewState extends State<EventsView> {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: event.status == 'Live'
                             ? AppTheme.success
@@ -344,7 +377,7 @@ class _EventsViewState extends State<EventsView> {
                   event.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                     color: AppTheme.textPrimary,
@@ -353,14 +386,21 @@ class _EventsViewState extends State<EventsView> {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    const Icon(Icons.location_on_outlined, size: 14, color: AppTheme.textMuted),
+                    Icon(
+                      Icons.location_on_outlined,
+                      size: 14,
+                      color: AppTheme.textMuted,
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         event.location,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textSecondary,
+                        ),
                       ),
                     ),
                   ],
@@ -371,13 +411,16 @@ class _EventsViewState extends State<EventsView> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Registration',
-                      style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                     Text(
                       '${event.registeredCount} / ${event.totalCapacity}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: AppTheme.primary,
@@ -392,7 +435,7 @@ class _EventsViewState extends State<EventsView> {
                     value: progress,
                     minHeight: 8,
                     backgroundColor: AppTheme.cardBorder,
-                    valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -403,15 +446,17 @@ class _EventsViewState extends State<EventsView> {
                   children: [
                     Text(
                       'Checked-in: ${event.checkedInCount}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         color: AppTheme.success,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     Text(
-                      event.ticketPrice > 0 ? '\$${event.ticketPrice.toStringAsFixed(0)}' : 'Free',
-                      style: const TextStyle(
+                      event.ticketPrice > 0
+                          ? '\$${event.ticketPrice.toStringAsFixed(0)}'
+                          : 'Free',
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: AppTheme.textPrimary,
@@ -435,8 +480,10 @@ class _EventsViewState extends State<EventsView> {
                                 attendees: widget.attendees,
                                 schedules: widget.schedules,
                                 announcements: widget.announcements,
-                                onAttendeeRegistered: widget.onAttendeeRegistered,
-                                onAttendeeCheckInToggled: widget.onAttendeeCheckInToggled,
+                                onAttendeeRegistered:
+                                    widget.onAttendeeRegistered,
+                                onAttendeeCheckInToggled:
+                                    widget.onAttendeeCheckInToggled,
                                 onDataChanged: widget.onDataChanged,
                               ),
                             ),

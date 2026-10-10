@@ -31,13 +31,17 @@ class _ScheduleViewState extends State<ScheduleView> {
     final speakerCtrl = TextEditingController();
     final roomCtrl = TextEditingController(text: 'Auditorium 1');
     final tagCtrl = TextEditingController(text: 'Keynote');
-    String selectedEvent = widget.events.isNotEmpty ? widget.events.first.id : '';
+    String selectedEvent = widget.events.isNotEmpty
+        ? widget.events.first.id
+        : '';
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: const Text('Add Agenda Session'),
           content: SingleChildScrollView(
             child: Column(
@@ -71,7 +75,9 @@ class _ScheduleViewState extends State<ScheduleView> {
                 const SizedBox(height: 6),
                 TextField(
                   controller: titleCtrl,
-                  decoration: const InputDecoration(hintText: 'e.g. Keynote Speech'),
+                  decoration: const InputDecoration(
+                    hintText: 'e.g. Keynote Speech',
+                  ),
                 ),
                 const SizedBox(height: 12),
                 const Text(
@@ -81,7 +87,9 @@ class _ScheduleViewState extends State<ScheduleView> {
                 const SizedBox(height: 6),
                 TextField(
                   controller: timeCtrl,
-                  decoration: const InputDecoration(hintText: 'e.g. 10:00 AM - 11:00 AM'),
+                  decoration: const InputDecoration(
+                    hintText: 'e.g. 10:00 AM - 11:00 AM',
+                  ),
                 ),
                 const SizedBox(height: 12),
                 const Text(
@@ -102,12 +110,17 @@ class _ScheduleViewState extends State<ScheduleView> {
                         children: [
                           const Text(
                             'Room / Stage',
-                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
                           ),
                           const SizedBox(height: 6),
                           TextField(
                             controller: roomCtrl,
-                            decoration: const InputDecoration(hintText: 'Hall B'),
+                            decoration: const InputDecoration(
+                              hintText: 'Hall B',
+                            ),
                           ),
                         ],
                       ),
@@ -119,12 +132,17 @@ class _ScheduleViewState extends State<ScheduleView> {
                         children: [
                           const Text(
                             'Track Tag',
-                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
                           ),
                           const SizedBox(height: 6),
                           TextField(
                             controller: tagCtrl,
-                            decoration: const InputDecoration(hintText: 'Tech Track'),
+                            decoration: const InputDecoration(
+                              hintText: 'Tech Track',
+                            ),
                           ),
                         ],
                       ),
@@ -135,18 +153,28 @@ class _ScheduleViewState extends State<ScheduleView> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
             ElevatedButton(
               onPressed: () async {
-                if (titleCtrl.text.trim().isNotEmpty && selectedEvent.isNotEmpty) {
+                if (titleCtrl.text.trim().isNotEmpty &&
+                    selectedEvent.isNotEmpty) {
                   final schedule = ScheduleItem(
                     id: 'SCH-${DateTime.now().millisecondsSinceEpoch}',
                     eventId: selectedEvent,
                     time: timeCtrl.text.trim(),
                     title: titleCtrl.text.trim(),
-                    speakerName: speakerCtrl.text.trim().isEmpty ? 'TBA' : speakerCtrl.text.trim(),
-                    roomOrTrack: roomCtrl.text.trim().isEmpty ? 'Main Hall' : roomCtrl.text.trim(),
-                    tag: tagCtrl.text.trim().isEmpty ? 'General' : tagCtrl.text.trim(),
+                    speakerName: speakerCtrl.text.trim().isEmpty
+                        ? 'TBA'
+                        : speakerCtrl.text.trim(),
+                    roomOrTrack: roomCtrl.text.trim().isEmpty
+                        ? 'Main Hall'
+                        : roomCtrl.text.trim(),
+                    tag: tagCtrl.text.trim().isEmpty
+                        ? 'General'
+                        : tagCtrl.text.trim(),
                   );
 
                   try {
@@ -157,13 +185,18 @@ class _ScheduleViewState extends State<ScheduleView> {
                     Navigator.of(ctx).pop();
 
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Schedule saved to Firebase successfully!')),
+                      const SnackBar(
+                        content: Text(
+                          'Schedule saved to Firebase successfully!',
+                        ),
+                      ),
                     );
                   } catch (e) {
                     if (!context.mounted) return;
 
-                    ScaffoldMessenger.of(context)
-                        .showSnackBar(SnackBar(content: Text('Failed to save schedule: $e')));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to save schedule: $e')),
+                    );
                   }
                 }
               },
@@ -196,7 +229,9 @@ class _ScheduleViewState extends State<ScheduleView> {
       ),
     );
 
-    if (confirmed != true || !mounted || _deletingScheduleIds.contains(schedule.id)) {
+    if (confirmed != true ||
+        !mounted ||
+        _deletingScheduleIds.contains(schedule.id)) {
       return;
     }
     setState(() => _deletingScheduleIds.add(schedule.id));
@@ -205,12 +240,14 @@ class _ScheduleViewState extends State<ScheduleView> {
       await _firestoreService.deleteSchedule(schedule.id);
       if (!mounted) return;
       widget.onDataChanged();
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('"${schedule.title}" was deleted.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('"${schedule.title}" was deleted.')),
+      );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Could not delete schedule session: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not delete schedule session: $error')),
+      );
     } finally {
       if (mounted) setState(() => _deletingScheduleIds.remove(schedule.id));
     }
@@ -236,7 +273,7 @@ class _ScheduleViewState extends State<ScheduleView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Master Schedule & Timeline',
                       style: TextStyle(
                         fontSize: 24,
@@ -247,7 +284,10 @@ class _ScheduleViewState extends State<ScheduleView> {
                     const SizedBox(height: 4),
                     Text(
                       'Coordinate day-of sessions and tracks.',
-                      style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -265,13 +305,17 @@ class _ScheduleViewState extends State<ScheduleView> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppTheme.surface,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppTheme.cardBorder),
             ),
             child: Row(
               children: [
-                const Icon(Icons.calendar_month_outlined, color: AppTheme.textSecondary, size: 20),
+                Icon(
+                  Icons.calendar_month_outlined,
+                  color: AppTheme.textSecondary,
+                  size: 20,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: DropdownButton<String>(
@@ -279,7 +323,10 @@ class _ScheduleViewState extends State<ScheduleView> {
                     underline: const SizedBox(),
                     value: _selectedEventId,
                     items: [
-                      const DropdownMenuItem(value: 'All', child: Text('All Events Combined')),
+                      const DropdownMenuItem(
+                        value: 'All',
+                        child: Text('All Events Combined'),
+                      ),
                       ...widget.events.map(
                         (e) => DropdownMenuItem(
                           value: e.id,
@@ -303,7 +350,7 @@ class _ScheduleViewState extends State<ScheduleView> {
               width: double.infinity,
               padding: const EdgeInsets.all(48),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppTheme.surface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppTheme.cardBorder),
               ),
@@ -334,7 +381,7 @@ class _ScheduleViewState extends State<ScheduleView> {
                 return Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppTheme.surface,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: AppTheme.cardBorder),
                   ),
@@ -342,14 +389,17 @@ class _ScheduleViewState extends State<ScheduleView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: AppTheme.primaryLight,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
                           s.time,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
                             color: AppTheme.primary,
@@ -366,7 +416,7 @@ class _ScheduleViewState extends State<ScheduleView> {
                                 Expanded(
                                   child: Text(
                                     s.title,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                       color: AppTheme.textPrimary,
@@ -383,22 +433,29 @@ class _ScheduleViewState extends State<ScheduleView> {
                                       ? const SizedBox(
                                           width: 18,
                                           height: 18,
-                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
                                         )
                                       : const Icon(Icons.delete_outline),
                                   color: AppTheme.danger,
                                 ),
                                 const SizedBox(width: 4),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: AppTheme.background,
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: AppTheme.cardBorder),
+                                    border: Border.all(
+                                      color: AppTheme.cardBorder,
+                                    ),
                                   ),
                                   child: Text(
                                     s.tag,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w600,
                                       color: AppTheme.textSecondary,
@@ -415,7 +472,7 @@ class _ScheduleViewState extends State<ScheduleView> {
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(
+                                    Icon(
                                       Icons.person_pin_outlined,
                                       size: 16,
                                       color: AppTheme.textMuted,
@@ -424,7 +481,7 @@ class _ScheduleViewState extends State<ScheduleView> {
                                     Flexible(
                                       child: Text(
                                         s.speakerName,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 13,
                                           color: AppTheme.textSecondary,
                                         ),
@@ -436,7 +493,7 @@ class _ScheduleViewState extends State<ScheduleView> {
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(
+                                    Icon(
                                       Icons.location_on_outlined,
                                       size: 16,
                                       color: AppTheme.textMuted,
@@ -445,7 +502,7 @@ class _ScheduleViewState extends State<ScheduleView> {
                                     Flexible(
                                       child: Text(
                                         s.roomOrTrack,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 13,
                                           color: AppTheme.textSecondary,
                                         ),
@@ -460,7 +517,10 @@ class _ScheduleViewState extends State<ScheduleView> {
                               const SizedBox(height: 10),
                               Text(
                                 'Event: ${event.title}',
-                                style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.textMuted,
+                                ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ],

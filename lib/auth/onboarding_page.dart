@@ -242,7 +242,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         Container(
           padding: const EdgeInsets.all(9),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               colors: [AppTheme.primary, AppTheme.accent],
             ),
             borderRadius: BorderRadius.circular(12),
@@ -254,7 +254,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
           ),
         ),
         const SizedBox(width: 10),
-        const Text(
+        Text(
           'EventEase',
           style: TextStyle(
             color: AppTheme.textPrimary,
@@ -276,7 +276,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             Expanded(
               child: Text(
                 'STEP ${_step + 1} OF 4',
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppTheme.primary,
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
@@ -286,7 +286,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             ),
             Text(
               titles[_step],
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppTheme.textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -325,7 +325,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppTheme.textPrimary,
               fontSize: 23,
               height: 1.2,
@@ -336,7 +336,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
           const SizedBox(height: 8),
           Text(
             subtitle,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppTheme.textSecondary,
               fontSize: 14,
               height: 1.4,
@@ -426,7 +426,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   Expanded(
                     child: Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppTheme.textPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -444,10 +444,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
               const SizedBox(height: 12),
               Text(
                 description,
-                style: const TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontSize: 13,
-                ),
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
               ),
               const SizedBox(height: 10),
               ...details.map(
@@ -455,7 +452,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   padding: const EdgeInsets.only(top: 5),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.check_rounded,
                         size: 16,
                         color: AppTheme.primary,
@@ -464,7 +461,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       Expanded(
                         child: Text(
                           detail,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppTheme.textSecondary,
                             fontSize: 12,
                           ),
@@ -673,7 +670,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       contentPadding: EdgeInsets.zero,
       title: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           color: AppTheme.textPrimary,
           fontSize: 14,
           fontWeight: FontWeight.w600,
@@ -681,7 +678,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       ),
       subtitle: Text(
         subtitle,
-        style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+        style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
       ),
       value: value,
       activeTrackColor: AppTheme.primary,
@@ -783,7 +780,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
               const SizedBox(width: 8),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppTheme.textPrimary,
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
@@ -808,16 +805,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
             width: 128,
             child: Text(
               label,
-              style: const TextStyle(
-                color: AppTheme.textSecondary,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppTheme.textPrimary,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -834,7 +828,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       padding: const EdgeInsets.only(bottom: 7),
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           color: AppTheme.textPrimary,
           fontSize: 13,
           fontWeight: FontWeight.w600,
@@ -902,16 +896,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.error_outline_rounded,
-            color: AppTheme.danger,
-            size: 18,
-          ),
+          Icon(Icons.error_outline_rounded, color: AppTheme.danger, size: 18),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(color: AppTheme.danger, fontSize: 13),
+              style: TextStyle(color: AppTheme.danger, fontSize: 13),
             ),
           ),
         ],
@@ -931,18 +921,18 @@ class _OnboardingPageState extends State<OnboardingPage> {
               children: [
                 Container(
                   padding: const EdgeInsets.all(20),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: AppTheme.successLight,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.check_rounded,
                     color: AppTheme.success,
                     size: 42,
                   ),
                 ),
                 const SizedBox(height: 18),
-                const Text(
+                Text(
                   'You’re all set!',
                   style: TextStyle(
                     color: AppTheme.textPrimary,
@@ -951,7 +941,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Your EventEase profile is ready. Taking you to your workspace…',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: AppTheme.textSecondary),

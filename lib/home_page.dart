@@ -87,22 +87,15 @@ class _HomePageState extends State<HomePage> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Event saved to Firebase successfully!'),
-        ),
+        const SnackBar(content: Text('Event saved to Firebase successfully!')),
       );
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to save event: $e'),
-        ),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Failed to save event: $e')));
     }
   }
-
-
 
   Future<void> _onAttendeeRegistered(AttendeeItem attendee) async {
     try {
@@ -118,17 +111,12 @@ class _HomePageState extends State<HomePage> {
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to save attendee: $e'),
-        ),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Failed to save attendee: $e')));
     }
   }
 
-  Future<void> _onAnnouncementSent(
-      AnnouncementItem announcement,
-      ) async {
+  Future<void> _onAnnouncementSent(AnnouncementItem announcement) async {
     try {
       await _firestoreService.createAnnouncement(announcement);
 
@@ -136,34 +124,23 @@ class _HomePageState extends State<HomePage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Announcement saved to Firebase successfully!',
-          ),
+          content: Text('Announcement saved to Firebase successfully!'),
         ),
       );
     } catch (e) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Failed to save announcement: $e',
-          ),
-        ),
+        SnackBar(content: Text('Failed to save announcement: $e')),
       );
     }
   }
 
-  Future<void> _onAttendeeCheckInToggled(
-      AttendeeItem attendee,
-      ) async {
+  Future<void> _onAttendeeCheckInToggled(AttendeeItem attendee) async {
     try {
       final newStatus = !attendee.isCheckedIn;
 
-      await _firestoreService.updateAttendeeCheckIn(
-        attendee,
-        newStatus,
-      );
+      await _firestoreService.updateAttendeeCheckIn(attendee, newStatus);
 
       if (!mounted) return;
 
@@ -179,22 +156,20 @@ class _HomePageState extends State<HomePage> {
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to update check-in: $e'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to update check-in: $e')));
     }
   }
 
   void _openSettings() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const SettingsPage()),
-    );
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const SettingsPage()));
   }
 
   @override
   Widget build(BuildContext context) {
+    Theme.of(context);
     final List<Widget> pages = [
       DashboardView(
         events: _events,
@@ -248,13 +223,21 @@ class _HomePageState extends State<HomePage> {
             body: Row(
               children: [
                 _buildWebSidebar(),
-                const VerticalDivider(thickness: 1, width: 1, color: AppTheme.cardBorder),
+                VerticalDivider(
+                  thickness: 1,
+                  width: 1,
+                  color: AppTheme.cardBorder,
+                ),
                 Expanded(
                   child: SafeArea(
                     child: Column(
                       children: [
                         _buildTopNavbar(),
-                        const Divider(thickness: 1, height: 1, color: AppTheme.cardBorder),
+                        Divider(
+                          thickness: 1,
+                          height: 1,
+                          color: AppTheme.cardBorder,
+                        ),
                         Expanded(child: pages[_selectedIndex]),
                       ],
                     ),
@@ -288,14 +271,16 @@ class _HomePageState extends State<HomePage> {
               ),
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.add_circle_outline_rounded, color: AppTheme.primary),
+                  icon: Icon(
+                    Icons.add_circle_outline_rounded,
+                    color: AppTheme.primary,
+                  ),
                   tooltip: 'Create Event',
                   onPressed: () {
                     showDialog(
                       context: context,
-                      builder: (ctx) => CreateEventDialog(
-                        onEventCreated: _onEventCreated,
-                      ),
+                      builder: (ctx) =>
+                          CreateEventDialog(onEventCreated: _onEventCreated),
                     );
                   },
                 ),
@@ -316,30 +301,45 @@ class _HomePageState extends State<HomePage> {
               onDestinationSelected: (index) =>
                   setState(() => _selectedIndex = index),
               indicatorColor: AppTheme.primaryLight,
-              destinations: const [
+              destinations: [
                 NavigationDestination(
                   icon: Icon(Icons.dashboard_outlined),
-                  selectedIcon: Icon(Icons.dashboard_rounded, color: AppTheme.primary),
+                  selectedIcon: Icon(
+                    Icons.dashboard_rounded,
+                    color: AppTheme.primary,
+                  ),
                   label: 'Home',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.event_outlined),
-                  selectedIcon: Icon(Icons.event_rounded, color: AppTheme.primary),
+                  selectedIcon: Icon(
+                    Icons.event_rounded,
+                    color: AppTheme.primary,
+                  ),
                   label: 'Events',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.people_alt_outlined),
-                  selectedIcon: Icon(Icons.people_alt_rounded, color: AppTheme.primary),
+                  selectedIcon: Icon(
+                    Icons.people_alt_rounded,
+                    color: AppTheme.primary,
+                  ),
                   label: 'Attendees',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.schedule_outlined),
-                  selectedIcon: Icon(Icons.schedule_rounded, color: AppTheme.primary),
+                  selectedIcon: Icon(
+                    Icons.schedule_rounded,
+                    color: AppTheme.primary,
+                  ),
                   label: 'Schedule',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.campaign_outlined),
-                  selectedIcon: Icon(Icons.campaign_rounded, color: AppTheme.primary),
+                  selectedIcon: Icon(
+                    Icons.campaign_rounded,
+                    color: AppTheme.primary,
+                  ),
                   label: 'Broadcasts',
                 ),
               ],
@@ -353,7 +353,7 @@ class _HomePageState extends State<HomePage> {
   Widget _buildWebSidebar() {
     return Container(
       width: 250,
-      color: Colors.white,
+      color: AppTheme.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -374,7 +374,7 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(width: 12),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     Text(
                       'EventEase',
                       style: TextStyle(
@@ -397,15 +397,35 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
-          const Divider(height: 1, color: AppTheme.cardBorder),
+          Divider(height: 1, color: AppTheme.cardBorder),
           const SizedBox(height: 12),
 
           // Nav Items
-          _sidebarItem(0, 'Dashboard', Icons.dashboard_outlined, Icons.dashboard_rounded),
+          _sidebarItem(
+            0,
+            'Dashboard',
+            Icons.dashboard_outlined,
+            Icons.dashboard_rounded,
+          ),
           _sidebarItem(1, 'Events', Icons.event_outlined, Icons.event_rounded),
-          _sidebarItem(2, 'Attendees', Icons.people_alt_outlined, Icons.people_alt_rounded),
-          _sidebarItem(3, 'Schedules', Icons.calendar_month_outlined, Icons.calendar_month_rounded),
-          _sidebarItem(4, 'Announcements', Icons.campaign_outlined, Icons.campaign_rounded),
+          _sidebarItem(
+            2,
+            'Attendees',
+            Icons.people_alt_outlined,
+            Icons.people_alt_rounded,
+          ),
+          _sidebarItem(
+            3,
+            'Schedules',
+            Icons.calendar_month_outlined,
+            Icons.calendar_month_rounded,
+          ),
+          _sidebarItem(
+            4,
+            'Announcements',
+            Icons.campaign_outlined,
+            Icons.campaign_rounded,
+          ),
 
           const Spacer(),
 
@@ -418,9 +438,8 @@ class _HomePageState extends State<HomePage> {
                 onPressed: () {
                   showDialog(
                     context: context,
-                    builder: (ctx) => CreateEventDialog(
-                      onEventCreated: _onEventCreated,
-                    ),
+                    builder: (ctx) =>
+                        CreateEventDialog(onEventCreated: _onEventCreated),
                   );
                 },
                 icon: const Icon(Icons.add, size: 18),
@@ -474,7 +493,9 @@ class _HomePageState extends State<HomePage> {
         return _userProfilePill(
           name: name,
           role: role,
-          photoUrl: _nonEmptyString(user.photoURL),
+          photoUrl:
+              _nonEmptyString(profile?['photoURL']) ??
+              _nonEmptyString(user.photoURL),
         );
       },
     );
@@ -502,8 +523,8 @@ class _HomePageState extends State<HomePage> {
             child: photoUrl == null
                 ? Text(
                     _initials(name),
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: AppTheme.surface,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
@@ -517,7 +538,7 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Text(
                   name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                     color: AppTheme.textPrimary,
@@ -526,10 +547,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 Text(
                   role,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppTheme.textSecondary,
-                  ),
+                  style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -563,7 +581,12 @@ class _HomePageState extends State<HomePage> {
     return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
   }
 
-  Widget _sidebarItem(int index, String title, IconData icon, IconData activeIcon) {
+  Widget _sidebarItem(
+    int index,
+    String title,
+    IconData icon,
+    IconData activeIcon,
+  ) {
     final isSelected = _selectedIndex == index;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
@@ -573,7 +596,9 @@ class _HomePageState extends State<HomePage> {
           dense: true,
           selected: isSelected,
           selectedTileColor: AppTheme.primaryLight,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           leading: Icon(
             isSelected ? activeIcon : icon,
             color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
@@ -597,7 +622,7 @@ class _HomePageState extends State<HomePage> {
     return Container(
       height: 64,
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      color: Colors.white,
+      color: AppTheme.surface,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -608,7 +633,7 @@ class _HomePageState extends State<HomePage> {
                 Flexible(
                   child: Text(
                     _getSectionTitle(_selectedIndex),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: AppTheme.textPrimary,
@@ -618,19 +643,30 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(width: 10),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.successLight,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.fiber_manual_record, color: AppTheme.success, size: 10),
+                      Icon(
+                        Icons.fiber_manual_record,
+                        color: AppTheme.success,
+                        size: 10,
+                      ),
                       SizedBox(width: 4),
                       Text(
                         'Live',
-                        style: TextStyle(fontSize: 11, color: AppTheme.success, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.success,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -642,12 +678,18 @@ class _HomePageState extends State<HomePage> {
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.help_outline_rounded, color: AppTheme.textSecondary),
+                icon: Icon(
+                  Icons.help_outline_rounded,
+                  color: AppTheme.textSecondary,
+                ),
                 tooltip: 'Documentation & Help',
                 onPressed: () {},
               ),
               IconButton(
-                icon: const Icon(Icons.settings_outlined, color: AppTheme.textSecondary),
+                icon: Icon(
+                  Icons.settings_outlined,
+                  color: AppTheme.textSecondary,
+                ),
                 tooltip: 'Settings',
                 onPressed: _openSettings,
               ),
@@ -655,7 +697,10 @@ class _HomePageState extends State<HomePage> {
               Stack(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.notifications_none_rounded, color: AppTheme.textSecondary),
+                    icon: Icon(
+                      Icons.notifications_none_rounded,
+                      color: AppTheme.textSecondary,
+                    ),
                     onPressed: () => setState(() => _selectedIndex = 4),
                   ),
                   Positioned(
@@ -664,7 +709,7 @@ class _HomePageState extends State<HomePage> {
                     child: Container(
                       width: 8,
                       height: 8,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         color: AppTheme.danger,
                         shape: BoxShape.circle,
                       ),

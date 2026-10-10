@@ -159,8 +159,10 @@ class _SplashScreenState extends State<SplashScreen>
                         child: Transform.rotate(
                           angle: _sparkleSpin.value,
                           alignment: _sparkleCenter,
-                          child: Image.asset(_sparkleAsset,
-                              fit: BoxFit.contain),
+                          child: Image.asset(
+                            _sparkleAsset,
+                            fit: BoxFit.contain,
+                          ),
                         ),
                       ),
                     ],
@@ -171,7 +173,7 @@ class _SplashScreenState extends State<SplashScreen>
                 const SizedBox(height: 10),
                 Opacity(
                   opacity: _taglineFade.value,
-                  child: const Text(
+                  child: Text(
                     'Plan. Manage. Celebrate.',
                     style: TextStyle(
                       fontSize: 14,
@@ -216,9 +218,6 @@ class _SplashScreenState extends State<SplashScreen>
         ),
       );
     }
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: letters,
-    );
+    return Row(mainAxisSize: MainAxisSize.min, children: letters);
   }
 }

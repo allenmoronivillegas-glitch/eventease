@@ -1,7 +1,11 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import '../services/user_profile_service.dart';
 import '../theme/app_theme.dart';
+import '../theme/theme_controller.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -12,8 +16,13 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   final _nameCtrl = TextEditingController();
+  final _profileService = UserProfileService();
 
   bool _savingName = false;
+  bool _uploadingPhoto = false;
+  double _uploadProgress = 0;
+  Uint8List? _pendingPhotoBytes;
+  String? _pendingPhotoType;
 
   // Notification preferences (local only for now).
   // TODO: persist these (SharedPreferences or a Firestore user document).
@@ -46,9 +55,8 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _toast(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _saveProfile() async {
@@ -61,13 +69,99 @@ class _SettingsPageState extends State<SettingsPage> {
     }
     setState(() => _savingName = true);
     try {
-      await user.updateDisplayName(name);
+      await _profileService.saveDisplayName(uid: user.uid, displayName: name);
       await user.reload();
       if (mounted) _toast('Profile updated');
     } on FirebaseAuthException catch (e) {
       if (mounted) _toast(e.message ?? 'Could not update profile.');
     } finally {
       if (mounted) setState(() => _savingName = false);
+    }
+  }
+
+  Future<void> _pickProfilePhoto() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp'],
+        allowMultiple: false,
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty || !mounted) return;
+      final file = result.files.single;
+      final bytes = file.bytes;
+      const maxBytes = 5 * 1024 * 1024;
+      if (file.size <= 0 || file.size > maxBytes || bytes == null) {
+        _toast('Choose an image no larger than 5 MB.');
+        return;
+      }
+      final contentType = switch (file.extension?.toLowerCase()) {
+        'jpg' || 'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+        _ => null,
+      };
+      if (contentType == null) {
+        _toast('Choose a PNG, JPEG, or WebP image.');
+        return;
+      }
+      setState(() {
+        _pendingPhotoBytes = bytes;
+        _pendingPhotoType = contentType;
+        _uploadProgress = 0;
+      });
+    } on PlatformException catch (error) {
+      if (mounted) {
+        _toast(error.message ?? 'Could not access the selected image.');
+      }
+    }
+  }
+
+  Future<void> _uploadProfilePhoto() async {
+    final user = FirebaseAuth.instance.currentUser;
+    final bytes = _pendingPhotoBytes;
+    final contentType = _pendingPhotoType;
+    if (user == null || bytes == null || contentType == null) return;
+    setState(() {
+      _uploadingPhoto = true;
+      _uploadProgress = 0;
+    });
+    try {
+      await _profileService.uploadProfilePhoto(
+        uid: user.uid,
+        bytes: bytes,
+        contentType: contentType,
+        onProgress: (progress) {
+          if (mounted) setState(() => _uploadProgress = progress);
+        },
+      );
+      if (!mounted) return;
+      setState(() {
+        _pendingPhotoBytes = null;
+        _pendingPhotoType = null;
+      });
+      _toast('Profile photo updated.');
+    } on ArgumentError catch (error) {
+      if (mounted) _toast(error.message?.toString() ?? 'Invalid image.');
+    } on FirebaseException catch (error) {
+      if (!mounted) return;
+      final message = error.code == 'unauthorized'
+          ? 'You do not have permission to upload this photo.'
+          : error.message ?? 'Could not upload the profile photo.';
+      _toast(message);
+    } finally {
+      if (mounted) setState(() => _uploadingPhoto = false);
+    }
+  }
+
+  Future<void> _changeAppearance({ThemeMode? mode, String? accentId}) async {
+    try {
+      await ThemeControllerScope.of(context)
+          .setAppearance(themeMode: mode, accentId: accentId);
+    } on FirebaseException catch (error) {
+      if (mounted) {
+        _toast(error.message ?? 'Could not sync appearance preferences.');
+      }
     }
   }
 
@@ -130,6 +224,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    Theme.of(context);
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
@@ -142,6 +237,7 @@ class _SettingsPageState extends State<SettingsPage> {
         stream: FirebaseAuth.instance.userChanges(),
         builder: (context, snapshot) {
           final user = snapshot.data ?? FirebaseAuth.instance.currentUser;
+          final photoUrl = user?.photoURL;
           return Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 640),
@@ -149,6 +245,57 @@ class _SettingsPageState extends State<SettingsPage> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   _profileHeader(user),
+                  const SizedBox(height: 16),
+                  _sectionCard(
+                    title: 'Profile photo',
+                    icon: Icons.photo_camera_outlined,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Choose a PNG, JPEG, or WebP image (up to 5 MB).',
+                          style: TextStyle(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: _uploadingPhoto
+                                  ? null
+                                  : _pickProfilePhoto,
+                              icon: const Icon(Icons.photo_library_outlined),
+                              label: Text(
+                                photoUrl == null
+                                    ? 'Choose photo'
+                                    : 'Replace photo',
+                              ),
+                            ),
+                            if (_pendingPhotoBytes != null)
+                              ElevatedButton.icon(
+                                onPressed: _uploadingPhoto
+                                    ? null
+                                    : _uploadProfilePhoto,
+                                icon: const Icon(Icons.cloud_upload_outlined),
+                                label: const Text('Upload photo'),
+                              ),
+                          ],
+                        ),
+                        if (_uploadingPhoto) ...[
+                          const SizedBox(height: 12),
+                          LinearProgressIndicator(value: _uploadProgress),
+                          const SizedBox(height: 4),
+                          Text('${(_uploadProgress * 100).round()}% uploaded'),
+                        ],
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   _sectionCard(
                     title: 'Profile',
@@ -160,14 +307,16 @@ class _SettingsPageState extends State<SettingsPage> {
                         TextField(
                           controller: _nameCtrl,
                           textCapitalization: TextCapitalization.words,
-                          decoration:
-                          const InputDecoration(hintText: 'Your name'),
+                          decoration: const InputDecoration(
+                            hintText: 'Your name',
+                          ),
                         ),
                         const SizedBox(height: 14),
                         _label('Email'),
                         TextField(
-                          controller:
-                          TextEditingController(text: user?.email ?? ''),
+                          controller: TextEditingController(
+                            text: user?.email ?? '',
+                          ),
                           enabled: false,
                           decoration: const InputDecoration(),
                         ),
@@ -177,20 +326,22 @@ class _SettingsPageState extends State<SettingsPage> {
                           child: ElevatedButton(
                             onPressed: _savingName ? null : _saveProfile,
                             child: _savingName
-                                ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
+                                ? SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppTheme.surface,
+                                    ),
+                                  )
                                 : const Text('Save changes'),
                           ),
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  _appearanceSection(ThemeControllerScope.of(context)),
                   const SizedBox(height: 16),
                   _sectionCard(
                     title: 'Notifications',
@@ -199,12 +350,12 @@ class _SettingsPageState extends State<SettingsPage> {
                       data: Theme.of(context).copyWith(
                         switchTheme: SwitchThemeData(
                           thumbColor: WidgetStateProperty.resolveWith(
-                                (states) => states.contains(WidgetState.selected)
+                            (states) => states.contains(WidgetState.selected)
                                 ? Colors.white
                                 : AppTheme.textMuted,
                           ),
                           trackColor: WidgetStateProperty.resolveWith(
-                                (states) => states.contains(WidgetState.selected)
+                            (states) => states.contains(WidgetState.selected)
                                 ? AppTheme.primary
                                 : AppTheme.cardBorder,
                           ),
@@ -219,21 +370,21 @@ class _SettingsPageState extends State<SettingsPage> {
                             'New registrations',
                             'When someone registers for your event',
                             _newRegistrations,
-                                (v) => setState(() => _newRegistrations = v),
+                            (v) => setState(() => _newRegistrations = v),
                           ),
-                          const Divider(height: 1, color: AppTheme.cardBorder),
+                          Divider(height: 1, color: AppTheme.cardBorder),
                           _switchRow(
                             'Check-in alerts',
                             'When an attendee checks in',
                             _checkInAlerts,
-                                (v) => setState(() => _checkInAlerts = v),
+                            (v) => setState(() => _checkInAlerts = v),
                           ),
-                          const Divider(height: 1, color: AppTheme.cardBorder),
+                          Divider(height: 1, color: AppTheme.cardBorder),
                           _switchRow(
                             'Daily summary',
                             'Registrations and check-ins each morning',
                             _dailySummary,
-                                (v) => setState(() => _dailySummary = v),
+                            (v) => setState(() => _dailySummary = v),
                           ),
                         ],
                       ),
@@ -245,7 +396,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     icon: Icons.lock_outline_rounded,
                     child: Row(
                       children: [
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -297,8 +448,10 @@ class _SettingsPageState extends State<SettingsPage> {
                               color: AppTheme.danger.withValues(alpha: 0.4),
                             ),
                           ),
-                          icon: const Icon(Icons.delete_outline_rounded,
-                              size: 18),
+                          icon: const Icon(
+                            Icons.delete_outline_rounded,
+                            size: 18,
+                          ),
                           label: const Text('Delete account'),
                         ),
                       ],
@@ -318,29 +471,30 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Widget _profileHeader(User? user) {
     final name = (user?.displayName ?? '').trim();
+    final ImageProvider<Object>? photo = _pendingPhotoBytes != null
+        ? MemoryImage(_pendingPhotoBytes!)
+        : user?.photoURL == null
+        ? null
+        : NetworkImage(user!.photoURL!);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: _cardDecoration(),
       child: Row(
         children: [
-          Container(
-            width: 56,
-            height: 56,
-            alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [AppTheme.primary, AppTheme.accent],
-              ),
-            ),
-            child: Text(
-              _initials(user),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: AppTheme.primary,
+            backgroundImage: photo,
+            child: photo == null
+                ? Text(
+                    _initials(user),
+                    style: TextStyle(
+                      color: AppTheme.onPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )
+                : null,
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -349,7 +503,7 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 Text(
                   name.isEmpty ? 'Organizer' : name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: AppTheme.textPrimary,
@@ -359,10 +513,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 const SizedBox(height: 2),
                 Text(
                   user?.email ?? '',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppTheme.textSecondary,
-                  ),
+                  style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -373,9 +524,89 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  Widget _appearanceSection(ThemeController controller) {
+    return _sectionCard(
+      title: 'Appearance',
+      icon: Icons.palette_outlined,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _label('Theme'),
+          SegmentedButton<ThemeMode>(
+            segments: const [
+              ButtonSegment(
+                value: ThemeMode.system,
+                label: Text('System'),
+                icon: Icon(Icons.settings_brightness_outlined),
+              ),
+              ButtonSegment(
+                value: ThemeMode.light,
+                label: Text('Light'),
+                icon: Icon(Icons.light_mode_outlined),
+              ),
+              ButtonSegment(
+                value: ThemeMode.dark,
+                label: Text('Dark'),
+                icon: Icon(Icons.dark_mode_outlined),
+              ),
+            ],
+            selected: {controller.themeMode},
+            onSelectionChanged: (selection) {
+              if (selection.isNotEmpty) {
+                _changeAppearance(mode: selection.first);
+              }
+            },
+          ),
+          const SizedBox(height: 18),
+          _label('Accent color'),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              for (final accent in AppTheme.accents)
+                Semantics(
+                  button: true,
+                  selected: controller.accentId == accent.id,
+                  label: '${accent.label} accent color',
+                  child: Tooltip(
+                    message: accent.label,
+                    child: InkWell(
+                      onTap: () => _changeAppearance(accentId: accent.id),
+                      customBorder: const CircleBorder(),
+                      child: Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: accent.color,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: controller.accentId == accent.id
+                                ? Theme.of(context).colorScheme.onSurface
+                                : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                        child: controller.accentId == accent.id
+                            ? Icon(
+                                Icons.check_rounded,
+                                color: AppTheme.onAccentFor(accent.color),
+                                size: 21,
+                              )
+                            : null,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   BoxDecoration _cardDecoration() {
     return BoxDecoration(
-      color: Colors.white,
+      color: AppTheme.surface,
       borderRadius: BorderRadius.circular(16),
       border: Border.all(color: AppTheme.cardBorder),
       boxShadow: [
@@ -412,7 +643,7 @@ class _SettingsPageState extends State<SettingsPage> {
               const SizedBox(width: 10),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
                   color: AppTheme.textPrimary,
@@ -432,7 +663,7 @@ class _SettingsPageState extends State<SettingsPage> {
       padding: const EdgeInsets.only(bottom: 6),
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,
           color: AppTheme.textPrimary,
@@ -442,11 +673,11 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _switchRow(
-      String title,
-      String subtitle,
-      bool value,
-      ValueChanged<bool> onChanged,
-      ) {
+    String title,
+    String subtitle,
+    bool value,
+    ValueChanged<bool> onChanged,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -457,7 +688,7 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.textPrimary,
@@ -466,10 +697,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.textSecondary,
-                  ),
+                  style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                 ),
               ],
             ),

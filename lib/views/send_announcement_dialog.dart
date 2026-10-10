@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/event_model.dart';
 import '../theme/app_theme.dart';
 
@@ -38,7 +39,8 @@ class _SendAnnouncementDialogState extends State<SendAnnouncementDialog> {
   @override
   void initState() {
     super.initState();
-    _selectedEventId = widget.initialEventId ??
+    _selectedEventId =
+        widget.initialEventId ??
         (widget.events.isNotEmpty ? widget.events.first.id : '');
   }
 
@@ -66,7 +68,9 @@ class _SendAnnouncementDialogState extends State<SendAnnouncementDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Broadcast sent to $_recipientGroup!'),
-          backgroundColor: _priority == 'Urgent' ? AppTheme.danger : AppTheme.primary,
+          backgroundColor: _priority == 'Urgent'
+              ? AppTheme.danger
+              : AppTheme.primary,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -77,7 +81,7 @@ class _SendAnnouncementDialogState extends State<SendAnnouncementDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface,
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 540),
@@ -100,11 +104,13 @@ class _SendAnnouncementDialogState extends State<SendAnnouncementDialog> {
                             color: AppTheme.accentLight,
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(Icons.campaign_rounded,
-                              color: AppTheme.accent),
+                          child: Icon(
+                            Icons.campaign_rounded,
+                            color: AppTheme.accent,
+                          ),
                         ),
                         const SizedBox(width: 12),
-                        const Text(
+                        Text(
                           'Broadcast Announcement',
                           style: TextStyle(
                             fontSize: 20,
@@ -115,27 +121,33 @@ class _SendAnnouncementDialogState extends State<SendAnnouncementDialog> {
                       ],
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close, color: AppTheme.textSecondary),
+                      icon: Icon(Icons.close, color: AppTheme.textSecondary),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
                 ),
                 const SizedBox(height: 6),
-                const Text(
+                Text(
                   'Instantly broadcast push notifications & email updates to event participants.',
                   style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
                 ),
-                const Divider(height: 28, color: AppTheme.cardBorder),
-                const Text('Event Destination *',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                Divider(height: 28, color: AppTheme.cardBorder),
+                const Text(
+                  'Event Destination *',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
-                  initialValue: _selectedEventId.isNotEmpty ? _selectedEventId : null,
+                  initialValue: _selectedEventId.isNotEmpty
+                      ? _selectedEventId
+                      : null,
                   items: widget.events
-                      .map((e) => DropdownMenuItem(
-                            value: e.id,
-                            child: Text(e.title, overflow: TextOverflow.ellipsis),
-                          ))
+                      .map(
+                        (e) => DropdownMenuItem(
+                          value: e.id,
+                          child: Text(e.title, overflow: TextOverflow.ellipsis),
+                        ),
+                      )
                       .toList(),
                   onChanged: (val) {
                     if (val != null) setState(() => _selectedEventId = val);
@@ -149,17 +161,21 @@ class _SendAnnouncementDialogState extends State<SendAnnouncementDialog> {
                     final targetField = Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Audience Target',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 13)),
+                        const Text(
+                          'Audience Target',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
                         const SizedBox(height: 6),
                         DropdownButtonFormField<String>(
                           initialValue: _recipientGroup,
                           items: _audiences
-                              .map((a) => DropdownMenuItem(
-                                    value: a,
-                                    child: Text(a),
-                                  ))
+                              .map(
+                                (a) =>
+                                    DropdownMenuItem(value: a, child: Text(a)),
+                              )
                               .toList(),
                           onChanged: (val) =>
                               setState(() => _recipientGroup = val!),
@@ -171,17 +187,21 @@ class _SendAnnouncementDialogState extends State<SendAnnouncementDialog> {
                     final priorityField = Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Priority Level',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 13)),
+                        const Text(
+                          'Priority Level',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
                         const SizedBox(height: 6),
                         DropdownButtonFormField<String>(
                           initialValue: _priority,
                           items: _priorities
-                              .map((p) => DropdownMenuItem(
-                                    value: p,
-                                    child: Text(p),
-                                  ))
+                              .map(
+                                (p) =>
+                                    DropdownMenuItem(value: p, child: Text(p)),
+                              )
                               .toList(),
                           onChanged: (val) => setState(() => _priority = val!),
                           decoration: const InputDecoration(),
@@ -208,21 +228,26 @@ class _SendAnnouncementDialogState extends State<SendAnnouncementDialog> {
                   },
                 ),
                 const SizedBox(height: 16),
-                const Text('Headline / Title *',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                const Text(
+                  'Headline / Title *',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
                 const SizedBox(height: 6),
                 TextFormField(
                   controller: _titleController,
                   decoration: const InputDecoration(
-                    hintText: 'e.g. Schedule Update: Hall B Keynote delayed 15 mins',
+                    hintText:
+                        'e.g. Schedule Update: Hall B Keynote delayed 15 mins',
                     prefixIcon: Icon(Icons.title_rounded, size: 18),
                   ),
                   validator: (v) =>
                       v == null || v.isEmpty ? 'Title is required' : null,
                 ),
                 const SizedBox(height: 16),
-                const Text('Message Details *',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                const Text(
+                  'Message Details *',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
                 const SizedBox(height: 6),
                 TextFormField(
                   controller: _messageController,

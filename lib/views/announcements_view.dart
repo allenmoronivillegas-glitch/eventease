@@ -47,7 +47,9 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
       ),
     );
 
-    if (confirmed != true || !mounted || _deletingAnnouncementIds.contains(announcement.id)) {
+    if (confirmed != true ||
+        !mounted ||
+        _deletingAnnouncementIds.contains(announcement.id)) {
       return;
     }
     setState(() => _deletingAnnouncementIds.add(announcement.id));
@@ -55,12 +57,14 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
     try {
       await _firestoreService.deleteAnnouncement(announcement.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('"${announcement.title}" was deleted.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('"${announcement.title}" was deleted.')),
+      );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Could not delete announcement: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not delete announcement: $error')),
+      );
     } finally {
       if (mounted) {
         setState(() => _deletingAnnouncementIds.remove(announcement.id));
@@ -88,7 +92,7 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Broadcasts',
                       style: TextStyle(
                         fontSize: 24,
@@ -99,7 +103,10 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
                     const SizedBox(height: 4),
                     Text(
                       'Instantly update your attendees.',
-                      style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -128,13 +135,17 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppTheme.surface,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppTheme.cardBorder),
             ),
             child: Row(
               children: [
-                const Icon(Icons.filter_list_rounded, color: AppTheme.textSecondary, size: 20),
+                Icon(
+                  Icons.filter_list_rounded,
+                  color: AppTheme.textSecondary,
+                  size: 20,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: DropdownButton<String>(
@@ -142,7 +153,10 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
                     underline: const SizedBox(),
                     value: _selectedEventFilter,
                     items: [
-                      const DropdownMenuItem(value: 'All', child: Text('All Events')),
+                      const DropdownMenuItem(
+                        value: 'All',
+                        child: Text('All Events'),
+                      ),
                       ...widget.events.map(
                         (e) => DropdownMenuItem(
                           value: e.id,
@@ -168,13 +182,17 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
               width: double.infinity,
               padding: const EdgeInsets.all(48),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppTheme.surface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppTheme.cardBorder),
               ),
               child: Column(
                 children: [
-                  Icon(Icons.campaign_outlined, size: 50, color: AppTheme.textMuted),
+                  Icon(
+                    Icons.campaign_outlined,
+                    size: 50,
+                    color: AppTheme.textMuted,
+                  ),
                   const SizedBox(height: 12),
                   const Text(
                     'No broadcasts found.',
@@ -200,7 +218,7 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
                 return Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppTheme.surface,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: isUrgent
@@ -230,7 +248,10 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: isUrgent
                                       ? AppTheme.dangerLight
@@ -255,13 +276,19 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
                               const SizedBox(width: 8),
                               Text(
                                 'Target: ${ann.sentTo}',
-                                style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.textSecondary,
+                                ),
                               ),
                             ],
                           ),
                           Text(
                             ann.timestamp,
-                            style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.textMuted,
+                            ),
                           ),
                           IconButton(
                             tooltip: 'Delete announcement',
@@ -273,7 +300,9 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
                                 ? const SizedBox(
                                     width: 18,
                                     height: 18,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
                                   )
                                 : const Icon(Icons.delete_outline),
                             color: AppTheme.danger,
@@ -283,7 +312,7 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
                       const SizedBox(height: 12),
                       Text(
                         ann.title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.bold,
                           color: AppTheme.textPrimary,
@@ -292,7 +321,7 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
                       const SizedBox(height: 8),
                       Text(
                         ann.message,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           color: AppTheme.textSecondary,
                           height: 1.45,
@@ -301,12 +330,16 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
                       const SizedBox(height: 14),
                       Row(
                         children: [
-                          const Icon(Icons.event, size: 14, color: AppTheme.textMuted),
+                          Icon(
+                            Icons.event,
+                            size: 14,
+                            color: AppTheme.textMuted,
+                          ),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               event?.title ?? 'General Announcement',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
                                 color: AppTheme.textSecondary,
                                 fontWeight: FontWeight.w500,

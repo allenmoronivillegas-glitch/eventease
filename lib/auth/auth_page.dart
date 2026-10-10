@@ -218,7 +218,7 @@ class _AuthPageState extends State<AuthPage> {
 
   Widget _buildBrandPanel() {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -321,7 +321,7 @@ class _AuthPageState extends State<AuthPage> {
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                     colors: [AppTheme.primary, AppTheme.accent],
                   ),
                   borderRadius: BorderRadius.circular(14),
@@ -334,7 +334,7 @@ class _AuthPageState extends State<AuthPage> {
               ),
             ),
             const SizedBox(height: 12),
-            const Center(
+            Center(
               child: Text(
                 'EventEase',
                 style: TextStyle(
@@ -349,7 +349,7 @@ class _AuthPageState extends State<AuthPage> {
           ],
           Text(
             _isLogin ? 'Welcome back' : 'Create your account',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: AppTheme.textPrimary,
@@ -361,7 +361,7 @@ class _AuthPageState extends State<AuthPage> {
             _isLogin
                 ? 'Log in to manage your events.'
                 : 'Start organizing events in minutes.',
-            style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+            style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
           ),
           const SizedBox(height: 20),
           _modeToggle(),
@@ -461,7 +461,7 @@ class _AuthPageState extends State<AuthPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.error_outline_rounded,
                     color: AppTheme.danger,
                     size: 18,
@@ -470,10 +470,7 @@ class _AuthPageState extends State<AuthPage> {
                   Expanded(
                     child: Text(
                       _error!,
-                      style: const TextStyle(
-                        color: AppTheme.danger,
-                        fontSize: 13,
-                      ),
+                      style: TextStyle(color: AppTheme.danger, fontSize: 13),
                     ),
                   ),
                 ],
@@ -518,7 +515,7 @@ class _AuthPageState extends State<AuthPage> {
             OutlinedButton(
               onPressed: _loading ? null : _signInWithGoogle,
               child: _googleLoading
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(
@@ -556,7 +553,7 @@ class _AuthPageState extends State<AuthPage> {
       padding: const EdgeInsets.only(bottom: 6),
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,
           color: AppTheme.textPrimary,

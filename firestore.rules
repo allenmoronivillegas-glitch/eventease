@@ -1,0 +1,273 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Assumed EventEase schema:
+    // users/{uid}: private user profile, email, role, onboarding data,
+    //   notificationPreferences, themeMode, accentColor, photoURL,
+    //   uid, createdAt, updatedAt.
+    // events/{eventId}: title, description, category, date, time, location,
+    //   isVirtual, totalCapacity, registeredCount, checkedInCount,
+    //   ticketPrice, bannerImageUrl, status, ownerUid.
+    // attendees/{attendeeId}: eventId, name, email, phone, ticketType,
+    //   registeredDate, isCheckedIn, checkInTime, ownerUid.
+    // schedules/{scheduleId}: eventId, time, title, speakerName,
+    //   roomOrTrack, tag, ownerUid.
+    // announcements/{announcementId}: eventId, title, message, timestamp,
+    //   priority, sentTo, ownerUid.
+    // Child ownerUid must be the UID on the referenced event. Ownerless legacy
+    // records are intentionally not granted client access by these rules.
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    function hasRequiredFields(data, fields) {
+      return data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(data, fields) {
+      return data.keys().hasOnly(fields);
+    }
+
+    function validString(data, field, maxLength) {
+      return data[field] is string && data[field].size() > 0 &&
+        data[field].size() <= maxLength;
+    }
+
+    function validOptionalString(data, field, maxLength) {
+      return !(field in data) || data[field] == null ||
+        (data[field] is string && data[field].size() <= maxLength);
+    }
+
+    function validOptionalTimestamp(data, field) {
+      return !(field in data) || data[field] == null ||
+        data[field] is timestamp;
+    }
+
+    function isValidUser(data, uid) {
+      return hasOnlyAllowedFields(data, [
+          'uid', 'displayName', 'email', 'phone', 'city', 'role',
+          'organizationName', 'organizationType', 'eventCategories',
+          'expectedEventSize', 'invitationCode', 'notificationPreferences',
+          'onboardingCompleted', 'createdAt', 'updatedAt', 'themeMode',
+          'accentColor', 'photoURL'
+        ]) &&
+        hasRequiredFields(data, [
+          'uid', 'displayName', 'email', 'role', 'onboardingCompleted',
+          'updatedAt'
+        ]) &&
+        data.uid == uid &&
+        validString(data, 'displayName', 100) &&
+        (data.email == null ||
+          (data.email is string && data.email.size() <= 320 &&
+            data.email == request.auth.token.email)) &&
+        data.role in ['organizer', 'attendee'] &&
+        data.onboardingCompleted is bool &&
+        data.updatedAt is timestamp &&
+        data.updatedAt == request.time &&
+        validOptionalTimestamp(data, 'createdAt') &&
+        validOptionalString(data, 'phone', 40) &&
+        validOptionalString(data, 'city', 120) &&
+        validOptionalString(data, 'organizationName', 160) &&
+        validOptionalString(data, 'organizationType', 80) &&
+        validOptionalString(data, 'expectedEventSize', 40) &&
+        validOptionalString(data, 'invitationCode', 100) &&
+        validOptionalString(data, 'photoURL', 2048) &&
+        (!('themeMode' in data) ||
+          data.themeMode in ['system', 'light', 'dark']) &&
+        (!('accentColor' in data) ||
+          data.accentColor in ['indigo', 'blue', 'teal', 'green', 'pink', 'orange']) &&
+        (!('eventCategories' in data) ||
+          (data.eventCategories is list &&
+            data.eventCategories.size() <= 6 &&
+            data.eventCategories.hasOnly([
+              'education', 'business', 'community', 'social', 'technology',
+              'other'
+            ]))) &&
+        (!('notificationPreferences' in data) ||
+          data.notificationPreferences == null ||
+          (data.notificationPreferences is map &&
+            data.notificationPreferences.keys().hasOnly([
+              'eventAnnouncements', 'eventReminders'
+            ]) &&
+            (!('eventAnnouncements' in data.notificationPreferences) ||
+              data.notificationPreferences.eventAnnouncements is bool) &&
+            (!('eventReminders' in data.notificationPreferences) ||
+              data.notificationPreferences.eventReminders is bool)));
+    }
+
+    function isValidEvent(data) {
+      return hasOnlyAllowedFields(data, [
+          'title', 'description', 'category', 'date', 'time', 'location',
+          'isVirtual', 'totalCapacity', 'registeredCount', 'checkedInCount',
+          'ticketPrice', 'bannerImageUrl', 'status', 'ownerUid'
+        ]) &&
+        hasRequiredFields(data, [
+          'title', 'description', 'category', 'date', 'time', 'location',
+          'isVirtual', 'totalCapacity', 'registeredCount', 'checkedInCount',
+          'ticketPrice', 'bannerImageUrl', 'status', 'ownerUid'
+        ]) &&
+        validString(data, 'title', 160) &&
+        data.description is string && data.description.size() <= 5000 &&
+        validString(data, 'category', 80) &&
+        validString(data, 'date', 100) &&
+        validString(data, 'time', 80) &&
+        validString(data, 'location', 240) &&
+        data.isVirtual is bool &&
+        data.totalCapacity is int && data.totalCapacity >= 0 &&
+        data.totalCapacity <= 1000000 &&
+        data.registeredCount is int && data.registeredCount >= 0 &&
+        data.registeredCount <= 1000000 &&
+        data.checkedInCount is int && data.checkedInCount >= 0 &&
+        data.checkedInCount <= data.registeredCount &&
+        data.ticketPrice is number && data.ticketPrice >= 0 &&
+        data.ticketPrice <= 1000000 &&
+        data.bannerImageUrl is string && data.bannerImageUrl.size() <= 2048 &&
+        data.status in ['Upcoming', 'Live', 'Completed', 'Draft'] &&
+        data.ownerUid is string && data.ownerUid.size() > 0 &&
+        data.ownerUid.size() <= 128;
+    }
+
+    function ownsEvent(eventId) {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/events/$(eventId)) &&
+        get(/databases/$(database)/documents/events/$(eventId)).data.ownerUid
+          == request.auth.uid;
+    }
+
+    function isValidAttendee(data) {
+      return hasOnlyAllowedFields(data, [
+          'ownerUid', 'eventId', 'name', 'email', 'phone', 'ticketType',
+          'registeredDate', 'isCheckedIn', 'checkInTime'
+        ]) &&
+        hasRequiredFields(data, [
+          'ownerUid', 'eventId', 'name', 'email', 'phone', 'ticketType',
+          'registeredDate', 'isCheckedIn', 'checkInTime'
+        ]) &&
+        validString(data, 'ownerUid', 128) &&
+        validString(data, 'eventId', 128) &&
+        validString(data, 'name', 120) &&
+        validString(data, 'email', 320) &&
+        validOptionalString(data, 'phone', 40) &&
+        data.ticketType in ['VIP', 'General', 'Speaker', 'Student'] &&
+        validString(data, 'registeredDate', 100) &&
+        data.isCheckedIn is bool &&
+        validOptionalString(data, 'checkInTime', 40);
+    }
+
+    function isValidSchedule(data) {
+      return hasOnlyAllowedFields(data, [
+          'ownerUid', 'eventId', 'time', 'title', 'speakerName', 'roomOrTrack',
+          'tag'
+        ]) &&
+        hasRequiredFields(data, [
+          'ownerUid', 'eventId', 'time', 'title', 'speakerName', 'roomOrTrack',
+          'tag'
+        ]) &&
+        validString(data, 'ownerUid', 128) &&
+        validString(data, 'eventId', 128) &&
+        validString(data, 'time', 80) &&
+        validString(data, 'title', 160) &&
+        validOptionalString(data, 'speakerName', 120) &&
+        validOptionalString(data, 'roomOrTrack', 100) &&
+        validString(data, 'tag', 80);
+    }
+
+    function isValidAnnouncement(data) {
+      return hasOnlyAllowedFields(data, [
+          'ownerUid', 'eventId', 'title', 'message', 'timestamp', 'priority',
+          'sentTo'
+        ]) &&
+        hasRequiredFields(data, [
+          'ownerUid', 'eventId', 'title', 'message', 'timestamp', 'priority',
+          'sentTo'
+        ]) &&
+        validString(data, 'ownerUid', 128) &&
+        validString(data, 'eventId', 128) &&
+        validString(data, 'title', 160) &&
+        validString(data, 'message', 5000) &&
+        validString(data, 'timestamp', 100) &&
+        data.priority in ['Normal', 'Urgent', 'Update'] &&
+        data.sentTo in [
+          'All Attendees', 'VIP Only', 'Speakers & Staff', 'Checked-In Only'
+        ];
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && isValidUser(request.resource.data, uid);
+      allow update: if isOwner(uid) &&
+        isValidUser(request.resource.data, uid) &&
+        request.resource.data.uid == resource.data.uid &&
+        request.resource.data.role == resource.data.role &&
+        (!('createdAt' in resource.data) ||
+          request.resource.data.createdAt == resource.data.createdAt);
+      allow delete: if false;
+    }
+
+    match /events/{eventId} {
+      allow read: if isOwner(resource.data.ownerUid);
+      allow create: if isAuthenticated() &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        isValidEvent(request.resource.data);
+      allow update: if isOwner(resource.data.ownerUid) &&
+        request.resource.data.ownerUid == resource.data.ownerUid &&
+        isValidEvent(request.resource.data);
+      allow delete: if isOwner(resource.data.ownerUid);
+    }
+
+    match /attendees/{attendeeId} {
+      allow read: if isOwner(resource.data.ownerUid);
+      allow create: if isAuthenticated() &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        ownsEvent(request.resource.data.eventId) &&
+        isValidAttendee(request.resource.data);
+      allow update: if isOwner(resource.data.ownerUid) &&
+        request.resource.data.ownerUid == resource.data.ownerUid &&
+        request.resource.data.eventId == resource.data.eventId &&
+        ownsEvent(request.resource.data.eventId) &&
+        isValidAttendee(request.resource.data);
+      allow delete: if isOwner(resource.data.ownerUid) &&
+        ownsEvent(resource.data.eventId);
+    }
+
+    match /schedules/{scheduleId} {
+      allow read: if isOwner(resource.data.ownerUid);
+      allow create: if isAuthenticated() &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        ownsEvent(request.resource.data.eventId) &&
+        isValidSchedule(request.resource.data);
+      allow update: if isOwner(resource.data.ownerUid) &&
+        request.resource.data.ownerUid == resource.data.ownerUid &&
+        request.resource.data.eventId == resource.data.eventId &&
+        ownsEvent(request.resource.data.eventId) &&
+        isValidSchedule(request.resource.data);
+      allow delete: if isOwner(resource.data.ownerUid) &&
+        ownsEvent(resource.data.eventId);
+    }
+
+    match /announcements/{announcementId} {
+      allow read: if isOwner(resource.data.ownerUid);
+      allow create: if isAuthenticated() &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        ownsEvent(request.resource.data.eventId) &&
+        isValidAnnouncement(request.resource.data);
+      allow update: if isOwner(resource.data.ownerUid) &&
+        request.resource.data.ownerUid == resource.data.ownerUid &&
+        request.resource.data.eventId == resource.data.eventId &&
+        ownsEvent(request.resource.data.eventId) &&
+        isValidAnnouncement(request.resource.data);
+      allow delete: if isOwner(resource.data.ownerUid) &&
+        ownsEvent(resource.data.eventId);
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
