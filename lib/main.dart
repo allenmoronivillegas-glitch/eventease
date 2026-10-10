@@ -1,9 +1,7 @@
 import 'package:eventease/auth/auth_page.dart';
-import 'package:eventease/home_page.dart';
 import 'package:firebase_core/firebase_core.dart' show Firebase;
 import 'package:flutter/material.dart';
 import 'firebase_options.dart';
-import 'auth/auth_gate.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
