@@ -7,6 +7,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 import 'firebase_options.dart';
 import 'theme/app_theme.dart';
+import 'package:eventease/splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,7 +36,7 @@ class EventEaseApp extends StatelessWidget {
       title: 'EventEase - Event Management Platform',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const AuthGate(),
+      home: const SplashScreen(),
     );
   }
 }
