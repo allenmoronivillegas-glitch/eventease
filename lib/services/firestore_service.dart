@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../models/event_model.dart';
 
 class FirestoreService {
@@ -53,6 +54,46 @@ class FirestoreService {
     });
   }
 
+  Future<void> deleteEvent(String eventId) async {
+    final eventRef = _db.collection('events').doc(eventId);
+    final eventSnapshot = await eventRef.get();
+    if (!eventSnapshot.exists) {
+      throw StateError('The event no longer exists.');
+    }
+
+    const relatedCollections = ['attendees', 'schedules', 'announcements'];
+
+    for (final collectionName in relatedCollections) {
+      final collection = _db.collection(collectionName);
+      while (true) {
+        final snapshot = await collection.where('eventId', isEqualTo: eventId).limit(450).get();
+        if (snapshot.docs.isEmpty) break;
+
+        final batch = _db.batch();
+        for (final document in snapshot.docs) {
+          batch.delete(document.reference);
+        }
+        await batch.commit();
+      }
+    }
+
+    for (final collectionName in relatedCollections) {
+      final remaining = await _db
+          .collection(collectionName)
+          .where('eventId', isEqualTo: eventId)
+          .limit(1)
+          .get();
+      if (remaining.docs.isNotEmpty) {
+        throw StateError(
+          'Some related $collectionName records remain. The event was kept; '
+          'retry the deletion after resolving the issue.',
+        );
+      }
+    }
+
+    await eventRef.delete();
+  }
+
   // ============================================================
   // ATTENDEES
   // ============================================================
@@ -80,52 +121,71 @@ class FirestoreService {
 
   // Create an attendee
   Future<void> createAttendee(AttendeeItem attendee) async {
-    await _db.collection('attendees').doc(attendee.id).set({
-      'eventId': attendee.eventId,
-      'name': attendee.name,
-      'email': attendee.email,
-      'phone': attendee.phone,
-      'ticketType': attendee.ticketType,
-      'registeredDate': attendee.registeredDate,
-      'isCheckedIn': attendee.isCheckedIn,
-      'checkInTime': attendee.checkInTime,
-    });
-
-    // Increase the registered attendee count
-    // for the associated event.
+    final attendeeRef = _db.collection('attendees').doc(attendee.id);
     final eventRef = _db.collection('events').doc(attendee.eventId);
 
     await _db.runTransaction((transaction) async {
-      final snapshot = await transaction.get(eventRef);
+      final eventSnapshot = await transaction.get(eventRef);
+      transaction.set(attendeeRef, {
+        'eventId': attendee.eventId,
+        'name': attendee.name,
+        'email': attendee.email,
+        'phone': attendee.phone,
+        'ticketType': attendee.ticketType,
+        'registeredDate': attendee.registeredDate,
+        'isCheckedIn': attendee.isCheckedIn,
+        'checkInTime': attendee.checkInTime,
+      });
 
-      if (!snapshot.exists) {
-        return;
+      if (eventSnapshot.exists) {
+        final currentCount = (eventSnapshot.data()?['registeredCount'] ?? 0) as num;
+        transaction.update(eventRef, {'registeredCount': currentCount.toInt() + 1});
+      }
+    });
+  }
+
+  Future<void> deleteAttendee(String attendeeId) async {
+    final attendeeRef = _db.collection('attendees').doc(attendeeId);
+
+    await _db.runTransaction((transaction) async {
+      final attendeeSnapshot = await transaction.get(attendeeRef);
+      if (!attendeeSnapshot.exists) {
+        throw StateError('This attendee no longer exists.');
       }
 
-      final data = snapshot.data();
+      final attendeeData = attendeeSnapshot.data()!;
+      final eventId = attendeeData['eventId'] as String? ?? '';
+      final wasCheckedIn = attendeeData['isCheckedIn'] == true;
+      final eventRef = eventId.isEmpty ? null : _db.collection('events').doc(eventId);
+      final eventSnapshot = eventRef == null ? null : await transaction.get(eventRef);
 
-      final currentCount =
-      (data?['registeredCount'] ?? 0) as num;
+      if (eventRef != null && eventSnapshot!.exists) {
+        final eventData = eventSnapshot.data()!;
+        final registeredCount = (eventData['registeredCount'] as num?)?.toInt() ?? 0;
+        final updates = <String, Object>{
+          'registeredCount': registeredCount > 0 ? registeredCount - 1 : 0,
+        };
 
-      transaction.update(eventRef, {
-        'registeredCount': currentCount.toInt() + 1,
-      });
+        if (wasCheckedIn) {
+          final checkedInCount = (eventData['checkedInCount'] as num?)?.toInt() ?? 0;
+          updates['checkedInCount'] = checkedInCount > 0 ? checkedInCount - 1 : 0;
+        }
+
+        transaction.update(eventRef, updates);
+      }
+
+      transaction.delete(attendeeRef);
     });
   }
 
   // Update attendee check-in status
-  Future<void> updateAttendeeCheckIn(
-      AttendeeItem attendee,
-      bool isCheckedIn,
-      ) async {
+  Future<void> updateAttendeeCheckIn(AttendeeItem attendee, bool isCheckedIn) async {
     String? checkInTime;
 
     if (isCheckedIn) {
       final now = DateTime.now();
 
-      final hour = now.hour > 12
-          ? now.hour - 12
-          : (now.hour == 0 ? 12 : now.hour);
+      final hour = now.hour > 12 ? now.hour - 12 : (now.hour == 0 ? 12 : now.hour);
 
       final minute = now.minute.toString().padLeft(2, '0');
 
@@ -134,33 +194,30 @@ class FirestoreService {
       checkInTime = '$hour:$minute $period';
     }
 
-    await _db.collection('attendees').doc(attendee.id).update({
-      'isCheckedIn': isCheckedIn,
-      'checkInTime': checkInTime,
-    });
-
-    // Update the checked-in count on the event.
-    final eventRef = _db.collection('events').doc(attendee.eventId);
+    final attendeeRef = _db.collection('attendees').doc(attendee.id);
 
     await _db.runTransaction((transaction) async {
-      final snapshot = await transaction.get(eventRef);
-
-      if (!snapshot.exists) {
-        return;
+      final attendeeSnapshot = await transaction.get(attendeeRef);
+      if (!attendeeSnapshot.exists) {
+        throw StateError('This attendee no longer exists.');
       }
 
-      final data = snapshot.data();
+      final attendeeData = attendeeSnapshot.data()!;
+      final wasCheckedIn = attendeeData['isCheckedIn'] == true;
+      final eventId = attendeeData['eventId'] as String? ?? '';
+      final eventRef = eventId.isEmpty ? null : _db.collection('events').doc(eventId);
+      final eventSnapshot = eventRef == null ? null : await transaction.get(eventRef);
 
-      final currentCount =
-      (data?['checkedInCount'] ?? 0) as num;
+      if (eventRef != null && eventSnapshot!.exists && wasCheckedIn != isCheckedIn) {
+        final currentCount = (eventSnapshot.data()?['checkedInCount'] as num?)?.toInt() ?? 0;
+        transaction.update(eventRef, {
+          'checkedInCount': isCheckedIn
+              ? currentCount + 1
+              : (currentCount > 0 ? currentCount - 1 : 0),
+        });
+      }
 
-      final newCount = isCheckedIn
-          ? currentCount.toInt() + 1
-          : (currentCount.toInt() - 1).clamp(0, 999999);
-
-      transaction.update(eventRef, {
-        'checkedInCount': newCount,
-      });
+      transaction.update(attendeeRef, {'isCheckedIn': isCheckedIn, 'checkInTime': checkInTime});
     });
   }
 
@@ -199,16 +256,17 @@ class FirestoreService {
     });
   }
 
+  Future<void> deleteSchedule(String scheduleId) async {
+    await _db.collection('schedules').doc(scheduleId).delete();
+  }
+
   // ============================================================
   // ANNOUNCEMENTS
   // ============================================================
 
   // Get all announcements from Firestore
   Stream<List<AnnouncementItem>> getAnnouncements() {
-    return _db
-        .collection('announcements')
-        .snapshots()
-        .map((snapshot) {
+    return _db.collection('announcements').snapshots().map((snapshot) {
       return snapshot.docs.map((doc) {
         final data = doc.data();
 
@@ -226,13 +284,8 @@ class FirestoreService {
   }
 
   // Create an announcement
-  Future<void> createAnnouncement(
-      AnnouncementItem announcement,
-      ) async {
-    await _db
-        .collection('announcements')
-        .doc(announcement.id)
-        .set({
+  Future<void> createAnnouncement(AnnouncementItem announcement) async {
+    await _db.collection('announcements').doc(announcement.id).set({
       'eventId': announcement.eventId,
       'title': announcement.title,
       'message': announcement.message,
@@ -240,5 +293,9 @@ class FirestoreService {
       'priority': announcement.priority,
       'sentTo': announcement.sentTo,
     });
+  }
+
+  Future<void> deleteAnnouncement(String announcementId) async {
+    await _db.collection('announcements').doc(announcementId).delete();
   }
 }

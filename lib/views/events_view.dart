@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../models/event_model.dart';
+import '../services/firestore_service.dart';
 import '../theme/app_theme.dart';
 import 'create_event_dialog.dart';
 import 'event_details_view.dart';
@@ -33,17 +35,68 @@ class EventsView extends StatefulWidget {
 class _EventsViewState extends State<EventsView> {
   String _filterCategory = 'All';
   String _searchQuery = '';
+  final FirestoreService _firestoreService = FirestoreService();
+  final Set<String> _deletingEventIds = {};
+
+  Future<void> _deleteEvent(EventItem event) async {
+    if (_deletingEventIds.contains(event.id)) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Event?'),
+        content: Text(
+          'Permanently delete "${event.title}" and all of its associated '
+          'attendees, schedules, and announcements?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Delete Event'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted || _deletingEventIds.contains(event.id)) {
+      return;
+    }
+    setState(() => _deletingEventIds.add(event.id));
+
+    try {
+      await _firestoreService.deleteEvent(event.id);
+      if (!mounted) return;
+      widget.onDataChanged();
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('"${event.title}" was deleted.')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Could not confirm deletion of "${event.title}". Related records '
+            'may have been partially deleted; verify Firestore before retrying. '
+            'Details: $error',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _deletingEventIds.remove(event.id));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final categories = ['All', 'Technology', 'Design', 'Business', 'Developer'];
 
     final filteredEvents = widget.events.where((event) {
-      final matchesCat =
-          _filterCategory == 'All' || event.category == _filterCategory;
-      final matchesSearch = event.title
-              .toLowerCase()
-              .contains(_searchQuery.toLowerCase()) ||
+      final matchesCat = _filterCategory == 'All' || event.category == _filterCategory;
+      final matchesSearch =
+          event.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           event.location.toLowerCase().contains(_searchQuery.toLowerCase());
       return matchesCat && matchesSearch;
     }).toList();
@@ -82,9 +135,7 @@ class _EventsViewState extends State<EventsView> {
                 onPressed: () {
                   showDialog(
                     context: context,
-                    builder: (ctx) => CreateEventDialog(
-                      onEventCreated: widget.onEventCreated,
-                    ),
+                    builder: (ctx) => CreateEventDialog(onEventCreated: widget.onEventCreated),
                   );
                 },
                 child: const Icon(Icons.add, size: 20),
@@ -107,16 +158,13 @@ class _EventsViewState extends State<EventsView> {
 
               final categoryDropdown = DropdownButtonFormField<String>(
                 initialValue: _filterCategory,
-                items: categories
-                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                    .toList(),
+                items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                 onChanged: (val) {
                   if (val != null) setState(() => _filterCategory = val);
                 },
                 decoration: const InputDecoration(
                   labelText: 'Category',
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 ),
               );
 
@@ -127,21 +175,15 @@ class _EventsViewState extends State<EventsView> {
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: AppTheme.cardBorder),
                 ),
-                child: isNarrow 
-                  ? Column(
-                      children: [
-                        searchField,
-                        const SizedBox(height: 12),
-                        categoryDropdown,
-                      ],
-                    )
-                  : Row(
-                      children: [
-                        Expanded(flex: 2, child: searchField),
-                        const SizedBox(width: 16),
-                        Expanded(flex: 1, child: categoryDropdown),
-                      ],
-                    ),
+                child: isNarrow
+                    ? Column(children: [searchField, const SizedBox(height: 12), categoryDropdown])
+                    : Row(
+                        children: [
+                          Expanded(flex: 2, child: searchField),
+                          const SizedBox(width: 16),
+                          Expanded(flex: 1, child: categoryDropdown),
+                        ],
+                      ),
               );
             },
           ),
@@ -173,8 +215,7 @@ class _EventsViewState extends State<EventsView> {
                       const SizedBox(height: 12),
                       const Text(
                         'No events found',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -312,18 +353,14 @@ class _EventsViewState extends State<EventsView> {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    const Icon(Icons.location_on_outlined,
-                        size: 14, color: AppTheme.textMuted),
+                    const Icon(Icons.location_on_outlined, size: 14, color: AppTheme.textMuted),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         event.location,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.textSecondary,
-                        ),
+                        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                       ),
                     ),
                   ],
@@ -385,27 +422,45 @@ class _EventsViewState extends State<EventsView> {
                 const SizedBox(height: 18),
 
                 // Manage / Details Button
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => EventDetailsView(
-                            eventId: event.id,
-                            events: widget.events,
-                            attendees: widget.attendees,
-                            schedules: widget.schedules,
-                            announcements: widget.announcements,
-                            onAttendeeRegistered: widget.onAttendeeRegistered,
-                            onAttendeeCheckInToggled: widget.onAttendeeCheckInToggled,
-                            onDataChanged: widget.onDataChanged,
-                          ),
-                        ),
-                      );
-                    },
-                    child: const Text('Manage Event'),
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => EventDetailsView(
+                                eventId: event.id,
+                                events: widget.events,
+                                attendees: widget.attendees,
+                                schedules: widget.schedules,
+                                announcements: widget.announcements,
+                                onAttendeeRegistered: widget.onAttendeeRegistered,
+                                onAttendeeCheckInToggled: widget.onAttendeeCheckInToggled,
+                                onDataChanged: widget.onDataChanged,
+                              ),
+                            ),
+                          );
+                        },
+                        child: const Text('Manage Event'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      tooltip: 'Delete event',
+                      onPressed: _deletingEventIds.contains(event.id)
+                          ? null
+                          : () => _deleteEvent(event),
+                      icon: _deletingEventIds.contains(event.id)
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.delete_outline),
+                      color: AppTheme.danger,
+                    ),
+                  ],
                 ),
               ],
             ),

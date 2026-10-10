@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../models/event_model.dart';
+import '../services/firestore_service.dart';
 import '../theme/app_theme.dart';
 import 'send_announcement_dialog.dart';
 
@@ -21,6 +23,50 @@ class AnnouncementsView extends StatefulWidget {
 
 class _AnnouncementsViewState extends State<AnnouncementsView> {
   String _selectedEventFilter = 'All';
+  final FirestoreService _firestoreService = FirestoreService();
+  final Set<String> _deletingAnnouncementIds = {};
+
+  Future<void> _deleteAnnouncement(AnnouncementItem announcement) async {
+    if (_deletingAnnouncementIds.contains(announcement.id)) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Announcement?'),
+        content: Text('Permanently delete "${announcement.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Delete Announcement'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted || _deletingAnnouncementIds.contains(announcement.id)) {
+      return;
+    }
+    setState(() => _deletingAnnouncementIds.add(announcement.id));
+
+    try {
+      await _firestoreService.deleteAnnouncement(announcement.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('"${announcement.title}" was deleted.')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Could not delete announcement: $error')));
+    } finally {
+      if (mounted) {
+        setState(() => _deletingAnnouncementIds.remove(announcement.id));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,8 +134,7 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.filter_list_rounded,
-                    color: AppTheme.textSecondary, size: 20),
+                const Icon(Icons.filter_list_rounded, color: AppTheme.textSecondary, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: DropdownButton<String>(
@@ -97,15 +142,18 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
                     underline: const SizedBox(),
                     value: _selectedEventFilter,
                     items: [
-                      const DropdownMenuItem(
-                          value: 'All', child: Text('All Events')),
-                      ...widget.events.map((e) => DropdownMenuItem(
-                            value: e.id,
-                            child: Text(e.title, overflow: TextOverflow.ellipsis),
-                          )),
+                      const DropdownMenuItem(value: 'All', child: Text('All Events')),
+                      ...widget.events.map(
+                        (e) => DropdownMenuItem(
+                          value: e.id,
+                          child: Text(e.title, overflow: TextOverflow.ellipsis),
+                        ),
+                      ),
                     ],
                     onChanged: (val) {
-                      if (val != null) setState(() => _selectedEventFilter = val);
+                      if (val != null) {
+                        setState(() => _selectedEventFilter = val);
+                      }
                     },
                   ),
                 ),
@@ -128,8 +176,10 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
                 children: [
                   Icon(Icons.campaign_outlined, size: 50, color: AppTheme.textMuted),
                   const SizedBox(height: 12),
-                  const Text('No broadcasts found.',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'No broadcasts found.',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ],
               ),
             )
@@ -142,9 +192,10 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
               itemBuilder: (context, index) {
                 final ann = filtered[index];
                 final isUrgent = ann.priority == 'Urgent';
-                final event = widget.events
-                    .cast<EventItem?>()
-                    .firstWhere((e) => e?.id == ann.eventId, orElse: () => null);
+                final event = widget.events.cast<EventItem?>().firstWhere(
+                  (e) => e?.id == ann.eventId,
+                  orElse: () => null,
+                );
 
                 return Container(
                   padding: const EdgeInsets.all(20),
@@ -179,14 +230,13 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: isUrgent
                                       ? AppTheme.dangerLight
                                       : ann.priority == 'Update'
-                                          ? AppTheme.primaryLight
-                                          : AppTheme.accentLight,
+                                      ? AppTheme.primaryLight
+                                      : AppTheme.accentLight,
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
@@ -197,24 +247,36 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
                                     color: isUrgent
                                         ? AppTheme.danger
                                         : ann.priority == 'Update'
-                                            ? AppTheme.primary
-                                            : AppTheme.accent,
+                                        ? AppTheme.primary
+                                        : AppTheme.accent,
                                   ),
                                 ),
                               ),
                               const SizedBox(width: 8),
                               Text(
                                 'Target: ${ann.sentTo}',
-                                style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppTheme.textSecondary),
+                                style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                               ),
                             ],
                           ),
                           Text(
                             ann.timestamp,
-                            style: const TextStyle(
-                                fontSize: 12, color: AppTheme.textMuted),
+                            style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                          ),
+                          IconButton(
+                            tooltip: 'Delete announcement',
+                            visualDensity: VisualDensity.compact,
+                            onPressed: _deletingAnnouncementIds.contains(ann.id)
+                                ? null
+                                : () => _deleteAnnouncement(ann),
+                            icon: _deletingAnnouncementIds.contains(ann.id)
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.delete_outline),
+                            color: AppTheme.danger,
                           ),
                         ],
                       ),
