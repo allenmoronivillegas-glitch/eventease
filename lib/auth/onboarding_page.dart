@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -113,27 +115,29 @@ class _OnboardingPageState extends State<OnboardingPage> {
     });
 
     try {
-      await _profileService.saveOnboardingProfile(
-        uid: widget.user.uid,
-        displayName: _nameController.text.trim(),
-        email: widget.user.email,
-        phone: _nullableText(_phoneController.text),
-        city: _nullableText(_cityController.text),
-        role: role,
-        organizationName: _nullableText(_organizationController.text),
-        organizationType: role == 'organizer' ? _organizationType : null,
-        eventCategories: _selectedCategories.toList()..sort(),
-        expectedEventSize: role == 'organizer' ? _expectedEventSize : null,
-        invitationCode: role == 'attendee'
-            ? _nullableText(_invitationCodeController.text)
-            : null,
-        notificationPreferences: role == 'attendee'
-            ? {
-                'eventAnnouncements': _announcements,
-                'eventReminders': _reminders,
-              }
-            : null,
-      );
+      await _profileService
+          .saveOnboardingProfile(
+            uid: widget.user.uid,
+            displayName: _nameController.text.trim(),
+            email: widget.user.email,
+            phone: _nullableText(_phoneController.text),
+            city: _nullableText(_cityController.text),
+            role: role,
+            organizationName: _nullableText(_organizationController.text),
+            organizationType: role == 'organizer' ? _organizationType : null,
+            eventCategories: _selectedCategories.toList()..sort(),
+            expectedEventSize: role == 'organizer' ? _expectedEventSize : null,
+            invitationCode: role == 'attendee'
+                ? _nullableText(_invitationCodeController.text)
+                : null,
+            notificationPreferences: role == 'attendee'
+                ? {
+                    'eventAnnouncements': _announcements,
+                    'eventReminders': _reminders,
+                  }
+                : null,
+          )
+          .timeout(const Duration(seconds: 20));
       if (!mounted) return;
       setState(() {
         _saving = false;
@@ -141,14 +145,46 @@ class _OnboardingPageState extends State<OnboardingPage> {
       });
       await Future<void>.delayed(const Duration(milliseconds: 900));
       if (mounted) widget.onFinished();
-    } catch (_) {
+    } catch (error) {
+      if (error is TimeoutException) {
+        debugPrint('[OnboardingPage] Profile save timed out after 20 seconds');
+      } else if (error is FirebaseException) {
+        debugPrint('[OnboardingPage] Profile save failed (code=${error.code})');
+      } else {
+        debugPrint(
+          '[OnboardingPage] Profile save failed '
+          '(${error.runtimeType})',
+        );
+      }
       if (mounted) {
         setState(() {
           _saving = false;
-          _saveError = 'We couldn’t save your profile. Check your connection and try again.';
+          _saveError = _profileSaveErrorMessage(error);
         });
       }
     }
+  }
+
+  String _profileSaveErrorMessage(Object error) {
+    if (error is TimeoutException) {
+      return 'Saving your profile took too long. Check your connection and try again.';
+    }
+    if (error is FirebaseException) {
+      switch (error.code) {
+        case 'permission-denied':
+          return 'Firestore denied permission to save your profile. Check your account permissions or contact support.';
+        case 'unauthenticated':
+        case 'user-mismatch':
+          return 'Your sign-in changed or expired. Sign in again before saving your profile.';
+        case 'unavailable':
+        case 'deadline-exceeded':
+        case 'network-request-failed':
+          return 'Could not reach Firestore to save your profile. Check your connection and try again.';
+        default:
+          return 'Your profile could not be saved (Firestore error: ${error.code}). Please try again.';
+      }
+    }
+    return 'Your profile could not be saved. Please try again.';
   }
 
   String? _nullableText(String value) {

@@ -124,6 +124,7 @@ class _AuthPageState extends State<AuthPage> {
       await GoogleAuthService.signIn();
       // AuthGate reacts to the Firebase auth state change.
     } on FirebaseAuthException catch (e) {
+      debugPrint('[AuthPage] Google sign-in failed (code=${e.code})');
       if (e.code != 'popup-closed-by-user' &&
           e.code != 'cancelled-popup-request' &&
           mounted) {
@@ -133,10 +134,11 @@ class _AuthPageState extends State<AuthPage> {
               : _friendlyError(e);
         });
       }
-    } catch (_) {
+    } catch (error) {
+      debugPrint('[AuthPage] Google sign-in failed (${error.runtimeType})');
       if (mounted) {
         setState(() {
-          _error = 'Could not complete Google sign-in. Check your connection and try again.';
+          _error = 'Could not complete Google sign-in. Please try again.';
         });
       }
     } finally {

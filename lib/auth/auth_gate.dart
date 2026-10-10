@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -20,11 +22,18 @@ class AuthGate extends StatefulWidget {
 
 class _AuthGateState extends State<AuthGate> {
   final UserProfileService _profileService = UserProfileService();
+  late final Stream<User?> _authStateChanges;
+
+  @override
+  void initState() {
+    super.initState();
+    _authStateChanges = FirebaseAuth.instance.authStateChanges();
+  }
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
+      stream: _authStateChanges,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -67,6 +76,8 @@ class _AuthenticatedUserGate extends StatefulWidget {
 }
 
 class _AuthenticatedUserGateState extends State<_AuthenticatedUserGate> {
+  static const _profileCheckTimeout = Duration(seconds: 15);
+
   late Future<bool> _profileCheck;
 
   @override
@@ -75,8 +86,18 @@ class _AuthenticatedUserGateState extends State<_AuthenticatedUserGate> {
     _profileCheck = _checkProfile();
   }
 
-  Future<bool> _checkProfile() {
-    return widget.profileService.hasCompletedOnboarding(widget.user.uid);
+  Future<bool> _checkProfile() async {
+    try {
+      return await widget.profileService
+          .hasCompletedOnboarding(widget.user.uid)
+          .timeout(_profileCheckTimeout);
+    } on TimeoutException {
+      debugPrint(
+        '[AuthGate] Profile check timed out '
+        'after ${_profileCheckTimeout.inSeconds} seconds',
+      );
+      rethrow;
+    }
   }
 
   void _retry() {
@@ -93,7 +114,7 @@ class _AuthenticatedUserGateState extends State<_AuthenticatedUserGate> {
         }
         if (snapshot.hasError) {
           return _AuthErrorScreen(
-            message: 'We couldn’t load your profile. Check your connection and try again.',
+            message: _profileErrorMessage(snapshot.error),
             onRetry: _retry,
           );
         }
@@ -104,6 +125,28 @@ class _AuthenticatedUserGateState extends State<_AuthenticatedUserGate> {
       },
     );
   }
+}
+
+String _profileErrorMessage(Object? error) {
+  if (error is TimeoutException) {
+    return 'The profile check took too long. Check your connection and try again.';
+  }
+  if (error is FirebaseException) {
+    switch (error.code) {
+      case 'permission-denied':
+        return 'Firestore denied access to your profile. Check your account permissions or contact support.';
+      case 'unauthenticated':
+      case 'user-mismatch':
+        return 'Your sign-in changed or expired while loading your profile. Sign out and sign in again.';
+      case 'unavailable':
+      case 'deadline-exceeded':
+      case 'network-request-failed':
+        return 'Could not reach Firestore. Check your connection or try again when the service is available.';
+      default:
+        return 'Your profile could not be loaded (Firestore error: ${error.code}). Please try again.';
+    }
+  }
+  return 'Your profile could not be loaded. Please try again.';
 }
 
 class _AuthLoadingScreen extends StatelessWidget {
@@ -137,7 +180,7 @@ class _AuthErrorScreen extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(
-                  Icons.cloud_off_outlined,
+                  Icons.error_outline_rounded,
                   size: 42,
                   color: AppTheme.textSecondary,
                 ),
