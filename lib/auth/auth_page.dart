@@ -1,5 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../theme/app_theme.dart';
 
@@ -20,7 +23,14 @@ class _AuthPageState extends State<AuthPage> {
   bool _isLogin = true;
   bool _obscure = true;
   bool _loading = false;
+  bool _googleLoading = false;
   String? _error;
+
+  bool get _supportsGoogleSignIn =>
+      kIsWeb ||
+      defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.macOS;
 
   @override
   void dispose() {
@@ -48,7 +58,15 @@ class _AuthPageState extends State<AuthPage> {
       case 'too-many-requests':
         return 'Too many attempts. Please wait a moment and try again.';
       case 'operation-not-allowed':
-        return 'Email/password sign-in is not enabled in your Firebase project.';
+        return 'This sign-in method is not enabled in your Firebase project.';
+      case 'account-exists-with-different-credential':
+        return 'An account already exists with this email using a different sign-in method.';
+      case 'unauthorized-domain':
+        return 'This website domain is not authorized for Google sign-in.';
+      case 'popup-blocked':
+        return 'Allow pop-ups for this website, then try Google sign-in again.';
+      case 'missing-google-id-token':
+        return 'Google did not return an ID token. Check the OAuth client configuration.';
       default:
         return e.message ?? 'Something went wrong. Please try again.';
     }
@@ -89,11 +107,71 @@ class _AuthPageState extends State<AuthPage> {
     }
   }
 
+  Future<void> _signInWithGoogle() async {
+    if (_loading) return;
+
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _loading = true;
+      _googleLoading = true;
+      _error = null;
+    });
+
+    try {
+      if (kIsWeb) {
+        await FirebaseAuth.instance.signInWithPopup(GoogleAuthProvider());
+      } else {
+        final googleUser = await GoogleSignIn.instance.authenticate();
+        final idToken = googleUser.authentication.idToken;
+        if (idToken == null) {
+          throw FirebaseAuthException(code: 'missing-google-id-token');
+        }
+
+        final credential = GoogleAuthProvider.credential(idToken: idToken);
+        await FirebaseAuth.instance.signInWithCredential(credential);
+      }
+      // AuthGate reacts to the Firebase auth state change.
+    } on GoogleSignInException catch (e) {
+      if (e.code != GoogleSignInExceptionCode.canceled && mounted) {
+        setState(() {
+          _error = e.description?.trim().isNotEmpty == true
+              ? e.description
+              : 'Could not complete Google sign-in. Please try again.';
+        });
+      }
+    } on FirebaseAuthException catch (e) {
+      if (e.code != 'popup-closed-by-user' &&
+          e.code != 'cancelled-popup-request' &&
+          mounted) {
+        setState(() {
+          _error = e.code == 'invalid-credential'
+              ? 'Google sign-in could not be verified. Please try again.'
+              : _friendlyError(e);
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _error = 'Could not complete Google sign-in. Check your connection and try again.';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _googleLoading = false;
+        });
+      }
+    }
+  }
+
   Future<void> _resetPassword() async {
     final email = _emailCtrl.text.trim();
     if (email.isEmpty || !email.contains('@')) {
-      setState(() => _error =
-      'Enter your email above first, then tap "Forgot password?".');
+      setState(
+        () => _error =
+            'Enter your email above first, then tap "Forgot password?".',
+      );
       return;
     }
     try {
@@ -174,8 +252,11 @@ class _AuthPageState extends State<AuthPage> {
                   color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.event_seat_rounded,
-                    color: Colors.white, size: 26),
+                child: const Icon(
+                  Icons.event_seat_rounded,
+                  color: Colors.white,
+                  size: 26,
+                ),
               ),
               const SizedBox(width: 12),
               const Text(
@@ -211,7 +292,10 @@ class _AuthPageState extends State<AuthPage> {
           ),
           const SizedBox(height: 32),
           _brandPoint(Icons.event_rounded, 'Create and manage events'),
-          _brandPoint(Icons.people_alt_rounded, 'Register and check in attendees'),
+          _brandPoint(
+            Icons.people_alt_rounded,
+            'Register and check in attendees',
+          ),
           _brandPoint(Icons.campaign_rounded, 'Send announcements instantly'),
         ],
       ),
@@ -232,10 +316,7 @@ class _AuthPageState extends State<AuthPage> {
             child: Icon(icon, color: Colors.white, size: 18),
           ),
           const SizedBox(width: 12),
-          Text(
-            text,
-            style: const TextStyle(color: Colors.white, fontSize: 14),
-          ),
+          Text(text, style: const TextStyle(color: Colors.white, fontSize: 14)),
         ],
       ),
     );
@@ -259,8 +340,11 @@ class _AuthPageState extends State<AuthPage> {
                   ),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(Icons.event_seat_rounded,
-                    color: Colors.white, size: 28),
+                child: const Icon(
+                  Icons.event_seat_rounded,
+                  color: Colors.white,
+                  size: 28,
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -291,10 +375,7 @@ class _AuthPageState extends State<AuthPage> {
             _isLogin
                 ? 'Log in to manage your events.'
                 : 'Start organizing events in minutes.',
-            style: const TextStyle(
-              fontSize: 14,
-              color: AppTheme.textSecondary,
-            ),
+            style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
           ),
           const SizedBox(height: 20),
           _modeToggle(),
@@ -309,7 +390,7 @@ class _AuthPageState extends State<AuthPage> {
                 prefixIcon: Icon(Icons.person_outline_rounded, size: 20),
               ),
               validator: (v) =>
-              (v == null || v.trim().isEmpty) ? 'Enter your name' : null,
+                  (v == null || v.trim().isEmpty) ? 'Enter your name' : null,
             ),
             const SizedBox(height: 14),
           ],
@@ -368,7 +449,7 @@ class _AuthPageState extends State<AuthPage> {
                 prefixIcon: Icon(Icons.lock_outline_rounded, size: 20),
               ),
               validator: (v) =>
-              v != _passCtrl.text ? 'Passwords don\'t match' : null,
+                  v != _passCtrl.text ? 'Passwords don\'t match' : null,
             ),
           ],
           if (_isLogin)
@@ -394,8 +475,11 @@ class _AuthPageState extends State<AuthPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.error_outline_rounded,
-                      color: AppTheme.danger, size: 18),
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    color: AppTheme.danger,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -413,17 +497,69 @@ class _AuthPageState extends State<AuthPage> {
           ],
           ElevatedButton(
             onPressed: _loading ? null : _submit,
-            child: _loading
+            child: _loading && !_googleLoading
                 ? const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
-              ),
-            )
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
                 : Text(_isLogin ? 'Log in' : 'Create account'),
           ),
+          if (_supportsGoogleSignIn) ...[
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                const Expanded(child: Divider()),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    'OR CONTINUE WITH',
+                    style: TextStyle(
+                      color: AppTheme.textMuted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ),
+                const Expanded(child: Divider()),
+              ],
+            ),
+            const SizedBox(height: 14),
+            OutlinedButton(
+              onPressed: _loading ? null : _signInWithGoogle,
+              child: _googleLoading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppTheme.primary,
+                      ),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'G',
+                          style: TextStyle(
+                            color: Color(0xFF4285F4),
+                            fontSize: 19,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Continue with Google',
+                          style: TextStyle(color: AppTheme.textPrimary),
+                        ),
+                      ],
+                    ),
+            ),
+          ],
         ],
       ),
     );
@@ -452,10 +588,7 @@ class _AuthPageState extends State<AuthPage> {
         border: Border.all(color: AppTheme.cardBorder),
       ),
       child: Row(
-        children: [
-          _modeTab('Log in', true),
-          _modeTab('Sign up', false),
-        ],
+        children: [_modeTab('Log in', true), _modeTab('Sign up', false)],
       ),
     );
   }
