@@ -1,10 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 
 import '../theme/app_theme.dart';
+import 'google_auth_service.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -26,11 +24,7 @@ class _AuthPageState extends State<AuthPage> {
   bool _googleLoading = false;
   String? _error;
 
-  bool get _supportsGoogleSignIn =>
-      kIsWeb ||
-      defaultTargetPlatform == TargetPlatform.android ||
-      defaultTargetPlatform == TargetPlatform.iOS ||
-      defaultTargetPlatform == TargetPlatform.macOS;
+  bool get _supportsGoogleSignIn => GoogleAuthService.isSupported;
 
   @override
   void dispose() {
@@ -65,8 +59,17 @@ class _AuthPageState extends State<AuthPage> {
         return 'This website domain is not authorized for Google sign-in.';
       case 'popup-blocked':
         return 'Allow pop-ups for this website, then try Google sign-in again.';
+      case 'google-desktop-not-configured':
+      case 'google-oauth-token-exchange-failed':
+      case 'google-oauth-browser-launch-failed':
+      case 'google-oauth-invalid-state':
+      case 'google-oauth-failed':
+      case 'google-oauth-missing-code':
+      case 'google-oauth-timeout':
+      case 'google-sign-in-failed':
       case 'missing-google-id-token':
-        return 'Google did not return an ID token. Check the OAuth client configuration.';
+        return e.message ??
+            'Could not complete Google sign-in. Please try again.';
       default:
         return e.message ?? 'Something went wrong. Please try again.';
     }
@@ -118,27 +121,8 @@ class _AuthPageState extends State<AuthPage> {
     });
 
     try {
-      if (kIsWeb) {
-        await FirebaseAuth.instance.signInWithPopup(GoogleAuthProvider());
-      } else {
-        final googleUser = await GoogleSignIn.instance.authenticate();
-        final idToken = googleUser.authentication.idToken;
-        if (idToken == null) {
-          throw FirebaseAuthException(code: 'missing-google-id-token');
-        }
-
-        final credential = GoogleAuthProvider.credential(idToken: idToken);
-        await FirebaseAuth.instance.signInWithCredential(credential);
-      }
+      await GoogleAuthService.signIn();
       // AuthGate reacts to the Firebase auth state change.
-    } on GoogleSignInException catch (e) {
-      if (e.code != GoogleSignInExceptionCode.canceled && mounted) {
-        setState(() {
-          _error = e.description?.trim().isNotEmpty == true
-              ? e.description
-              : 'Could not complete Google sign-in. Please try again.';
-        });
-      }
     } on FirebaseAuthException catch (e) {
       if (e.code != 'popup-closed-by-user' &&
           e.code != 'cancelled-popup-request' &&
