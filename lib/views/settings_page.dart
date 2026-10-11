@@ -183,45 +183,6 @@ class _SettingsPageState extends State<SettingsPage> {
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
-  Future<void> _deleteAccount() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete account?'),
-        content: const Text(
-          'This permanently deletes your login. This can\'t be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-
-    try {
-      await FirebaseAuth.instance.currentUser?.delete();
-      if (mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      }
-    } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
-      if (e.code == 'requires-recent-login') {
-        _toast('For security, log out and log back in, then try again.');
-      } else {
-        _toast(e.message ?? 'Could not delete account.');
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     Theme.of(context);
@@ -441,7 +402,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           label: const Text('Log out'),
                         ),
                         OutlinedButton.icon(
-                          onPressed: _deleteAccount,
+                          onPressed: null,
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppTheme.danger,
                             side: BorderSide(
@@ -449,12 +410,22 @@ class _SettingsPageState extends State<SettingsPage> {
                             ),
                           ),
                           icon: const Icon(
-                            Icons.delete_outline_rounded,
+                            Icons.delete_forever_outlined,
                             size: 18,
                           ),
-                          label: const Text('Delete account'),
+                          label: const Text('Account deletion unavailable'),
                         ),
                       ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Account deletion is temporarily unavailable because this '
+                    'app does not yet safely remove the account’s Firestore '
+                    'data and uploaded profile photo.',
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 12,
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -502,7 +473,7 @@ class _SettingsPageState extends State<SettingsPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  name.isEmpty ? 'Organizer' : name,
+                  name.isEmpty ? 'EventEase user' : name,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,

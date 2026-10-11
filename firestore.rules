@@ -8,13 +8,16 @@ service cloud.firestore {
     //   uid, createdAt, updatedAt.
     // events/{eventId}: title, description, category, date, time, location,
     //   isVirtual, totalCapacity, registeredCount, checkedInCount,
-    //   ticketPrice, bannerImageUrl, status, ownerUid.
+    //   ticketPrice, bannerImageUrl, status, ownerUid, isPublished (optional
+    //   on legacy records; missing is treated as unpublished).
     // attendees/{attendeeId}: eventId, name, email, phone, ticketType,
     //   registeredDate, isCheckedIn, checkInTime, ownerUid.
     // schedules/{scheduleId}: eventId, time, title, speakerName,
     //   roomOrTrack, tag, ownerUid.
     // announcements/{announcementId}: eventId, title, message, timestamp,
     //   priority, sentTo, ownerUid.
+    // event_registrations/{eventId_attendeeUid}: eventId, organizerUid,
+    //   attendeeUid, registeredAt.
     // Child ownerUid must be the UID on the referenced event. Ownerless legacy
     // records are intentionally not granted client access by these rules.
 
@@ -24,6 +27,20 @@ service cloud.firestore {
 
     function isOwner(uid) {
       return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    function isOrganizer() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+          == 'organizer';
+    }
+
+    function isAttendee() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+          == 'attendee';
     }
 
     function hasRequiredFields(data, fields) {
@@ -105,7 +122,7 @@ service cloud.firestore {
       return hasOnlyAllowedFields(data, [
           'title', 'description', 'category', 'date', 'time', 'location',
           'isVirtual', 'totalCapacity', 'registeredCount', 'checkedInCount',
-          'ticketPrice', 'bannerImageUrl', 'status', 'ownerUid'
+          'ticketPrice', 'bannerImageUrl', 'status', 'ownerUid', 'isPublished'
         ]) &&
         hasRequiredFields(data, [
           'title', 'description', 'category', 'date', 'time', 'location',
@@ -130,11 +147,12 @@ service cloud.firestore {
         data.bannerImageUrl is string && data.bannerImageUrl.size() <= 2048 &&
         data.status in ['Upcoming', 'Live', 'Completed', 'Draft'] &&
         data.ownerUid is string && data.ownerUid.size() > 0 &&
-        data.ownerUid.size() <= 128;
+        data.ownerUid.size() <= 128 &&
+        (!('isPublished' in data) || data.isPublished is bool);
     }
 
     function ownsEvent(eventId) {
-      return isAuthenticated() &&
+      return isOrganizer() &&
         exists(/databases/$(database)/documents/events/$(eventId)) &&
         get(/databases/$(database)/documents/events/$(eventId)).data.ownerUid
           == request.auth.uid;
@@ -198,6 +216,21 @@ service cloud.firestore {
         ];
     }
 
+    function isValidEventRegistration(data, registrationId) {
+      return hasOnlyAllowedFields(data, [
+          'eventId', 'organizerUid', 'attendeeUid', 'registeredAt'
+        ]) &&
+        hasRequiredFields(data, [
+          'eventId', 'organizerUid', 'attendeeUid', 'registeredAt'
+        ]) &&
+        validString(data, 'eventId', 128) &&
+        validString(data, 'organizerUid', 128) &&
+        validString(data, 'attendeeUid', 128) &&
+        registrationId == data.eventId + '_' + data.attendeeUid &&
+        data.registeredAt is timestamp &&
+        data.registeredAt == request.time;
+    }
+
     match /users/{uid} {
       allow read: if isOwner(uid);
       allow create: if isOwner(uid) && isValidUser(request.resource.data, uid);
@@ -211,59 +244,80 @@ service cloud.firestore {
     }
 
     match /events/{eventId} {
-      allow read: if isOwner(resource.data.ownerUid);
-      allow create: if isAuthenticated() &&
+      allow read: if (isOrganizer() && isOwner(resource.data.ownerUid)) ||
+        (isAttendee() && resource.data.isPublished == true);
+      allow create: if isOrganizer() &&
         request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.isPublished == false &&
         isValidEvent(request.resource.data);
-      allow update: if isOwner(resource.data.ownerUid) &&
+      allow update: if isOrganizer() && isOwner(resource.data.ownerUid) &&
         request.resource.data.ownerUid == resource.data.ownerUid &&
         isValidEvent(request.resource.data);
-      allow delete: if isOwner(resource.data.ownerUid);
+      allow delete: if isOrganizer() && isOwner(resource.data.ownerUid);
     }
 
     match /attendees/{attendeeId} {
-      allow read: if isOwner(resource.data.ownerUid);
-      allow create: if isAuthenticated() &&
+      allow read: if isOrganizer() && isOwner(resource.data.ownerUid);
+      allow create: if isOrganizer() &&
         request.resource.data.ownerUid == request.auth.uid &&
         ownsEvent(request.resource.data.eventId) &&
         isValidAttendee(request.resource.data);
-      allow update: if isOwner(resource.data.ownerUid) &&
+      allow update: if isOrganizer() && isOwner(resource.data.ownerUid) &&
         request.resource.data.ownerUid == resource.data.ownerUid &&
         request.resource.data.eventId == resource.data.eventId &&
         ownsEvent(request.resource.data.eventId) &&
         isValidAttendee(request.resource.data);
-      allow delete: if isOwner(resource.data.ownerUid) &&
+      allow delete: if isOrganizer() && isOwner(resource.data.ownerUid) &&
         ownsEvent(resource.data.eventId);
     }
 
     match /schedules/{scheduleId} {
-      allow read: if isOwner(resource.data.ownerUid);
-      allow create: if isAuthenticated() &&
+      allow read: if isOrganizer() && isOwner(resource.data.ownerUid);
+      allow create: if isOrganizer() &&
         request.resource.data.ownerUid == request.auth.uid &&
         ownsEvent(request.resource.data.eventId) &&
         isValidSchedule(request.resource.data);
-      allow update: if isOwner(resource.data.ownerUid) &&
+      allow update: if isOrganizer() && isOwner(resource.data.ownerUid) &&
         request.resource.data.ownerUid == resource.data.ownerUid &&
         request.resource.data.eventId == resource.data.eventId &&
         ownsEvent(request.resource.data.eventId) &&
         isValidSchedule(request.resource.data);
-      allow delete: if isOwner(resource.data.ownerUid) &&
+      allow delete: if isOrganizer() && isOwner(resource.data.ownerUid) &&
         ownsEvent(resource.data.eventId);
     }
 
     match /announcements/{announcementId} {
-      allow read: if isOwner(resource.data.ownerUid);
-      allow create: if isAuthenticated() &&
+      allow read: if isOrganizer() && isOwner(resource.data.ownerUid);
+      allow create: if isOrganizer() &&
         request.resource.data.ownerUid == request.auth.uid &&
         ownsEvent(request.resource.data.eventId) &&
         isValidAnnouncement(request.resource.data);
-      allow update: if isOwner(resource.data.ownerUid) &&
+      allow update: if isOrganizer() && isOwner(resource.data.ownerUid) &&
         request.resource.data.ownerUid == resource.data.ownerUid &&
         request.resource.data.eventId == resource.data.eventId &&
         ownsEvent(request.resource.data.eventId) &&
         isValidAnnouncement(request.resource.data);
-      allow delete: if isOwner(resource.data.ownerUid) &&
+      allow delete: if isOrganizer() && isOwner(resource.data.ownerUid) &&
         ownsEvent(resource.data.eventId);
+    }
+
+    match /event_registrations/{registrationId} {
+      allow read: if (isAttendee() &&
+          isOwner(resource.data.attendeeUid)) ||
+        (isOrganizer() && isOwner(resource.data.organizerUid));
+      allow create: if isAttendee() &&
+        request.resource.data.attendeeUid == request.auth.uid &&
+        isValidEventRegistration(request.resource.data, registrationId) &&
+        exists(/databases/$(database)/documents/events/$(request.resource.data.eventId)) &&
+        get(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data.isPublished == true &&
+        get(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data.ownerUid ==
+          request.resource.data.organizerUid;
+      allow update: if false;
+      allow delete: if (isAttendee() &&
+          isOwner(resource.data.attendeeUid)) ||
+        (isOrganizer() &&
+          isOwner(resource.data.organizerUid) &&
+          ownsEvent(resource.data.eventId));
     }
 
     match /{document=**} {

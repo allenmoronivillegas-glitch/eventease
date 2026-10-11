@@ -37,6 +37,32 @@ class _EventsViewState extends State<EventsView> {
   String _searchQuery = '';
   final FirestoreService _firestoreService = FirestoreService();
   final Set<String> _deletingEventIds = {};
+  final Set<String> _publishingEventIds = {};
+
+  Future<void> _togglePublication(EventItem event) async {
+    if (_publishingEventIds.contains(event.id)) return;
+    setState(() => _publishingEventIds.add(event.id));
+    try {
+      await _firestoreService.setEventPublished(event.id, !event.isPublished);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            event.isPublished
+                ? '"${event.title}" is no longer published.'
+                : '"${event.title}" is now published for attendees.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not update publication: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _publishingEventIds.remove(event.id));
+    }
+  }
 
   Future<void> _deleteEvent(EventItem event) async {
     if (_deletingEventIds.contains(event.id)) return;
@@ -47,7 +73,7 @@ class _EventsViewState extends State<EventsView> {
         title: const Text('Delete Event?'),
         content: Text(
           'Permanently delete "${event.title}" and all of its associated '
-          'attendees, schedules, and announcements?',
+          'attendees, schedules, announcements, and self-registrations?',
         ),
         actions: [
           TextButton(
@@ -493,6 +519,25 @@ class _EventsViewState extends State<EventsView> {
                       ),
                     ),
                     const SizedBox(width: 8),
+                    TextButton.icon(
+                      onPressed: _publishingEventIds.contains(event.id)
+                          ? null
+                          : () => _togglePublication(event),
+                      icon: _publishingEventIds.contains(event.id)
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Icon(
+                              event.isPublished
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.public_outlined,
+                              size: 18,
+                            ),
+                      label: Text(event.isPublished ? 'Unpublish' : 'Publish'),
+                    ),
+                    const SizedBox(width: 4),
                     IconButton(
                       tooltip: 'Delete event',
                       onPressed: _deletingEventIds.contains(event.id)

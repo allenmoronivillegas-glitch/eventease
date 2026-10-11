@@ -36,12 +36,16 @@ class _EventDetailsViewState extends State<EventDetailsView>
     with SingleTickerProviderStateMixin {
   final FirestoreService _firestoreService = FirestoreService();
   late TabController _tabController;
+  late Stream<List<EventRegistration>> _registrationsStream;
   String _attendeeSearchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
+    _registrationsStream = _firestoreService.watchEventRegistrations(
+      widget.eventId,
+    );
   }
 
   @override
@@ -343,6 +347,10 @@ class _EventDetailsViewState extends State<EventDetailsView>
               icon: const Icon(Icons.people_outline, size: 20),
               text: 'Attendees (${eventAttendees.length})',
             ),
+            const Tab(
+              icon: Icon(Icons.app_registration_outlined, size: 20),
+              text: 'Self-registrations',
+            ),
             Tab(
               icon: const Icon(Icons.schedule_outlined, size: 20),
               text: 'Schedule (${eventSchedules.length})',
@@ -363,10 +371,13 @@ class _EventDetailsViewState extends State<EventDetailsView>
           // 2. ATTENDEES TAB (with check-in capability)
           _buildAttendeesTab(event, filteredAttendees),
 
+          // 3. Attendee self-registrations are separate from organizer records.
+          _buildSelfRegistrationsTab(event),
+
           // 3. SCHEDULE TAB
           _buildScheduleTab(eventSchedules),
 
-          // 4. ANNOUNCEMENTS TAB
+          // 5. ANNOUNCEMENTS TAB
           _buildAnnouncementsTab(eventAnnouncements),
         ],
       ),
@@ -843,6 +854,50 @@ class _EventDetailsViewState extends State<EventDetailsView>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSelfRegistrationsTab(EventItem event) {
+    return StreamBuilder<List<EventRegistration>>(
+      stream: _registrationsStream,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return const Center(
+            child: Text('Could not load self-registrations. Try again later.'),
+          );
+        }
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final registrations = snapshot.data!;
+        if (registrations.isEmpty) {
+          return const Center(
+            child: Text('No attendee self-registrations yet.'),
+          );
+        }
+        return ListView.separated(
+          padding: const EdgeInsets.all(24),
+          itemCount: registrations.length,
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
+          itemBuilder: (context, index) {
+            final registration = registrations[index];
+            return ListTile(
+              leading: const CircleAvatar(
+                child: Icon(Icons.person_outline_rounded),
+              ),
+              title: Text('Attendee ${registration.attendeeUid}'),
+              subtitle: Text(
+                'Registered ${registration.registeredAt.toLocal()}',
+              ),
+              tileColor: AppTheme.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: AppTheme.cardBorder),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

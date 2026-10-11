@@ -38,6 +38,56 @@ class FirestoreService {
         );
   }
 
+  Stream<List<EventItem>> getPublishedEvents() {
+    if (_auth.currentUser == null) return Stream.value(const []);
+    return _db
+        .collection('events')
+        .where('isPublished', isEqualTo: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => _eventFromData(doc.id, doc.data()))
+              .toList(),
+        );
+  }
+
+  Stream<Set<String>> watchMyRegistrationEventIds() {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return Stream.value(const {});
+    return _db
+        .collection('event_registrations')
+        .where('attendeeUid', isEqualTo: uid)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((document) => document.data()['eventId'] as String)
+              .toSet(),
+        );
+  }
+
+  Stream<List<EventRegistration>> watchEventRegistrations(String eventId) {
+    return _db
+        .collection('event_registrations')
+        .where('eventId', isEqualTo: eventId)
+        .where('organizerUid', isEqualTo: _uid)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs.map((document) {
+            final data = document.data();
+            final registeredAt = data['registeredAt'];
+            if (registeredAt is! Timestamp) {
+              throw StateError('A registration has an invalid timestamp.');
+            }
+            return EventRegistration(
+              eventId: data['eventId'] as String,
+              organizerUid: data['organizerUid'] as String,
+              attendeeUid: data['attendeeUid'] as String,
+              registeredAt: registeredAt.toDate(),
+            );
+          }).toList(),
+        );
+  }
+
   Future<void> createEvent(EventItem event) async {
     final uid = _uid;
     final eventRef = _db.collection('events').doc(event.id);
@@ -49,21 +99,75 @@ class FirestoreService {
     });
   }
 
+  Future<void> setEventPublished(String eventId, bool isPublished) async {
+    final uid = _uid;
+    final eventRef = _db.collection('events').doc(eventId);
+    await _db.runTransaction((transaction) async {
+      final eventSnapshot = await transaction.get(eventRef);
+      _requireOwnedEvent(eventSnapshot, uid);
+      transaction.update(eventRef, {'isPublished': isPublished});
+    });
+  }
+
+  Future<bool> registerForEvent(String eventId) async {
+    final uid = _uid;
+    final eventRef = _db.collection('events').doc(eventId);
+    final registrationRef = _db
+        .collection('event_registrations')
+        .doc('${eventId}_$uid');
+    return _db.runTransaction((transaction) async {
+      final eventSnapshot = await transaction.get(eventRef);
+      if (!eventSnapshot.exists ||
+          eventSnapshot.data()?['isPublished'] != true) {
+        throw StateError('This event is not available for registration.');
+      }
+      final registrationSnapshot = await transaction.get(registrationRef);
+      if (registrationSnapshot.exists) return false;
+      final organizerUid = eventSnapshot.data()?['ownerUid'];
+      if (organizerUid is! String || organizerUid.isEmpty) {
+        throw StateError('This event has no valid organizer.');
+      }
+      transaction.set(registrationRef, {
+        'eventId': eventId,
+        'organizerUid': organizerUid,
+        'attendeeUid': uid,
+        'registeredAt': FieldValue.serverTimestamp(),
+      });
+      return true;
+    });
+  }
+
+  Future<void> cancelEventRegistration(String eventId) async {
+    final uid = _uid;
+    await _db.collection('event_registrations').doc('${eventId}_$uid').delete();
+  }
+
   Future<void> deleteEvent(String eventId) async {
     final uid = _uid;
     final eventRef = _db.collection('events').doc(eventId);
-    final eventSnapshot = await eventRef.get();
-    if (!eventSnapshot.exists || eventSnapshot.data()?['ownerUid'] != uid) {
-      throw StateError('The event does not exist or is not owned by you.');
-    }
+    await _db.runTransaction((transaction) async {
+      final eventSnapshot = await transaction.get(eventRef);
+      _requireOwnedEvent(eventSnapshot, uid);
+      if (eventSnapshot.data()?['isPublished'] == true) {
+        transaction.update(eventRef, {'isPublished': false});
+      }
+    });
 
-    const relatedCollections = ['attendees', 'schedules', 'announcements'];
+    const relatedCollections = [
+      'attendees',
+      'schedules',
+      'announcements',
+      'event_registrations',
+    ];
     for (final collectionName in relatedCollections) {
       final collection = _db.collection(collectionName);
       while (true) {
+        final ownerField = collectionName == 'event_registrations'
+            ? 'organizerUid'
+            : 'ownerUid';
         final snapshot = await collection
             .where('eventId', isEqualTo: eventId)
-            .where('ownerUid', isEqualTo: uid)
+            .where(ownerField, isEqualTo: uid)
             .limit(450)
             .get();
         if (snapshot.docs.isEmpty) break;
@@ -80,7 +184,12 @@ class FirestoreService {
       final remaining = await _db
           .collection(collectionName)
           .where('eventId', isEqualTo: eventId)
-          .where('ownerUid', isEqualTo: uid)
+          .where(
+            collectionName == 'event_registrations'
+                ? 'organizerUid'
+                : 'ownerUid',
+            isEqualTo: uid,
+          )
           .limit(1)
           .get();
       if (remaining.docs.isNotEmpty) {
@@ -374,6 +483,7 @@ class FirestoreService {
       ticketPrice: (data['ticketPrice'] ?? 0).toDouble(),
       bannerImageUrl: data['bannerImageUrl'] ?? '',
       status: data['status'] ?? 'Upcoming',
+      isPublished: data['isPublished'] == true,
     );
   }
 
@@ -391,6 +501,7 @@ class FirestoreService {
     'ticketPrice': event.ticketPrice,
     'bannerImageUrl': event.bannerImageUrl,
     'status': event.status,
+    'isPublished': event.isPublished,
   };
 
   AttendeeItem _attendeeFromData(String id, Map<String, dynamic> data) {

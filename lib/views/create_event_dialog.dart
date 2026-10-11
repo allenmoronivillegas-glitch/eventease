@@ -128,7 +128,7 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Fill in the details to publish your event to the attendee portal.',
+                  'Create a draft event. Publish it from Events Directory when it is ready.',
                   style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
                 ),
                 Divider(height: 28, color: AppTheme.cardBorder),

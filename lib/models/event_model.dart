@@ -13,6 +13,7 @@ class EventItem {
   final double ticketPrice;
   final String bannerImageUrl;
   final String status; // 'Upcoming', 'Live', 'Completed', 'Draft'
+  final bool isPublished;
 
   EventItem({
     required this.id,
@@ -29,6 +30,21 @@ class EventItem {
     this.ticketPrice = 0.0,
     required this.bannerImageUrl,
     this.status = 'Upcoming',
+    this.isPublished = false,
+  });
+}
+
+class EventRegistration {
+  final String eventId;
+  final String organizerUid;
+  final String attendeeUid;
+  final DateTime registeredAt;
+
+  const EventRegistration({
+    required this.eventId,
+    required this.organizerUid,
+    required this.attendeeUid,
+    required this.registeredAt,
   });
 }
 

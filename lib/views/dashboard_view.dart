@@ -134,7 +134,7 @@ class DashboardView extends StatelessWidget {
                   StatCard(
                     title: 'TOTAL ATTENDEES',
                     value: '$totalRegistrations',
-                    subtitle: '+12% registered this week',
+                    subtitle: 'Across your events',
                     icon: Icons.groups_rounded,
                     iconColor: AppTheme.accent,
                     iconBgColor: AppTheme.accentLight,
