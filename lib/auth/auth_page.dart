@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -76,6 +78,8 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   Future<void> _submit() async {
+    if (_loading) return;
+
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
 
@@ -238,10 +242,11 @@ class _AuthPageState extends State<AuthPage> {
                   color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
-                  Icons.event_seat_rounded,
-                  color: Colors.white,
-                  size: 26,
+                child: Image.asset(
+                  'assets/branding/eventease_bow.png',
+                  width: 34,
+                  height: 24,
+                  fit: BoxFit.contain,
                 ),
               ),
               const SizedBox(width: 12),
@@ -326,10 +331,11 @@ class _AuthPageState extends State<AuthPage> {
                   ),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(
-                  Icons.event_seat_rounded,
-                  color: Colors.white,
-                  size: 28,
+                child: Image.asset(
+                  'assets/branding/eventease_bow.png',
+                  width: 40,
+                  height: 30,
+                  fit: BoxFit.contain,
                 ),
               ),
             ),
@@ -366,6 +372,15 @@ class _AuthPageState extends State<AuthPage> {
           const SizedBox(height: 20),
           _modeToggle(),
           const SizedBox(height: 20),
+          Text(
+            'Continue with email',
+            style: TextStyle(
+              color: AppTheme.textPrimary,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 14),
           if (!_isLogin) ...[
             _label('Full name'),
             TextFormField(
@@ -526,13 +541,10 @@ class _AuthPageState extends State<AuthPage> {
                   : Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text(
-                          'G',
-                          style: TextStyle(
-                            color: Color(0xFF4285F4),
-                            fontSize: 19,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CustomPaint(painter: _GoogleLogoPainter()),
                         ),
                         const SizedBox(width: 10),
                         Text(
@@ -580,10 +592,12 @@ class _AuthPageState extends State<AuthPage> {
     final selected = _isLogin == login;
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() {
-          _isLogin = login;
-          _error = null;
-        }),
+        onTap: _loading
+            ? null
+            : () => setState(() {
+                _isLogin = login;
+                _error = null;
+              }),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(vertical: 10),
@@ -607,4 +621,38 @@ class _AuthPageState extends State<AuthPage> {
       ),
     );
   }
+}
+
+class _GoogleLogoPainter extends CustomPainter {
+  const _GoogleLogoPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.shortestSide * 0.38;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    final stroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size.shortestSide * 0.2
+      ..strokeCap = StrokeCap.butt;
+
+    void drawSegment(Color color, double startAngle, double sweepAngle) {
+      stroke.color = color;
+      canvas.drawArc(rect, startAngle, sweepAngle, false, stroke);
+    }
+
+    drawSegment(const Color(0xFF4285F4), -math.pi / 4, math.pi / 2);
+    drawSegment(const Color(0xFF34A853), math.pi / 4, math.pi / 2);
+    drawSegment(const Color(0xFFFBBC05), 3 * math.pi / 4, math.pi / 4);
+    drawSegment(const Color(0xFFEA4335), math.pi, 3 * math.pi / 4);
+
+    final bar = Paint()
+      ..color = const Color(0xFF4285F4)
+      ..strokeWidth = size.shortestSide * 0.2
+      ..strokeCap = StrokeCap.butt;
+    canvas.drawLine(center, Offset(center.dx + radius, center.dy), bar);
+  }
+
+  @override
+  bool shouldRepaint(covariant _GoogleLogoPainter oldDelegate) => false;
 }
