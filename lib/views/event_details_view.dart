@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/event_model.dart';
+import '../services/firestore_error_message.dart';
 import '../services/firestore_service.dart';
 import '../theme/app_theme.dart';
 import 'register_attendee_dialog.dart';
@@ -244,7 +245,9 @@ class _EventDetailsViewState extends State<EventDetailsView>
                 if (!ctx.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Could not save schedule item: $error'),
+                    content: Text(
+                      firestoreErrorMessage(error, 'save this schedule item'),
+                    ),
                   ),
                 );
               }

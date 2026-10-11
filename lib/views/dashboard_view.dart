@@ -15,7 +15,7 @@ class DashboardView extends StatelessWidget {
   final List<ScheduleItem> schedules;
   final List<AnnouncementItem> announcements;
   final Function(int) onNavigateToTab;
-  final Function(EventItem) onEventCreated;
+  final Future<void> Function(EventItem) onEventCreated;
   final Function(AttendeeItem) onAttendeeRegistered;
   final Function(AttendeeItem) onAttendeeCheckInToggled;
   final Function(AnnouncementItem) onAnnouncementSent;

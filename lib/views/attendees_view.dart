@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/event_model.dart';
+import '../services/firestore_error_message.dart';
 import '../services/firestore_service.dart';
 import '../theme/app_theme.dart';
 import 'register_attendee_dialog.dart';
@@ -72,7 +73,9 @@ class _AttendeesViewState extends State<AttendeesView> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not delete attendee: $error')),
+        SnackBar(
+          content: Text(firestoreErrorMessage(error, 'delete this attendee')),
+        ),
       );
     } finally {
       if (mounted) setState(() => _deletingAttendeeIds.remove(attendee.id));

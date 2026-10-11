@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../models/event_model.dart';
+import '../services/firestore_error_message.dart';
 import '../theme/app_theme.dart';
 
 class CreateEventDialog extends StatefulWidget {
-  final Function(EventItem) onEventCreated;
+  final Future<void> Function(EventItem) onEventCreated;
 
   const CreateEventDialog({super.key, required this.onEventCreated});
 
@@ -24,6 +25,8 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
 
   String _selectedCategory = 'Technology';
   bool _isVirtual = false;
+  bool _saving = false;
+  String? _saveError;
 
   final List<String> _categories = [
     'Technology',
@@ -46,35 +49,49 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
     super.dispose();
   }
 
-  void _submit() {
-    if (_formKey.currentState!.validate()) {
-      final newEvent = EventItem(
-        id: 'EVT-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
-        title: _titleController.text.trim(),
-        description: _descController.text.trim(),
-        category: _selectedCategory,
-        date: _dateController.text.trim(),
-        time: _timeController.text.trim(),
-        location: _locationController.text.trim(),
-        isVirtual: _isVirtual,
-        totalCapacity: int.tryParse(_capacityController.text.trim()) ?? 100,
-        registeredCount: 0,
-        checkedInCount: 0,
-        ticketPrice: double.tryParse(_priceController.text.trim()) ?? 0.0,
-        bannerImageUrl:
-            'https://picsum.photos/seed/${_titleController.text.hashCode}/900/400',
-        status: 'Upcoming',
-      );
+  Future<void> _submit() async {
+    if (_saving || !_formKey.currentState!.validate()) return;
+    setState(() {
+      _saving = true;
+      _saveError = null;
+    });
 
-      widget.onEventCreated(newEvent);
+    final newEvent = EventItem(
+      id: 'EVT-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
+      title: _titleController.text.trim(),
+      description: _descController.text.trim(),
+      category: _selectedCategory,
+      date: _dateController.text.trim(),
+      time: _timeController.text.trim(),
+      location: _locationController.text.trim(),
+      isVirtual: _isVirtual,
+      totalCapacity: int.parse(_capacityController.text.trim()),
+      registeredCount: 0,
+      checkedInCount: 0,
+      ticketPrice: double.parse(_priceController.text.trim()),
+      bannerImageUrl:
+          'https://picsum.photos/seed/${_titleController.text.hashCode}/900/400',
+      status: 'Upcoming',
+    );
+
+    try {
+      await widget.onEventCreated(newEvent);
+      if (!mounted) return;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Event "${newEvent.title}" created successfully!'),
+          content: Text('Event "${newEvent.title}" saved as a draft.'),
           backgroundColor: AppTheme.success,
           behavior: SnackBarBehavior.floating,
         ),
       );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _saveError = firestoreErrorMessage(error, 'save this event');
+      });
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -150,9 +167,14 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
                           decoration: const InputDecoration(
                             hintText: 'e.g. AI & Cloud Architecture Summit',
                           ),
-                          validator: (v) => v == null || v.isEmpty
-                              ? 'Title is required'
-                              : null,
+                          validator: (value) {
+                            final title = value?.trim() ?? '';
+                            if (title.isEmpty) return 'Title is required';
+                            if (title.length > 160) {
+                              return 'Title must be 160 characters or fewer';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 16),
                         LayoutBuilder(
@@ -203,9 +225,17 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
                                   decoration: const InputDecoration(
                                     hintText: 'e.g. 500',
                                   ),
-                                  validator: (v) => v == null || v.isEmpty
-                                      ? 'Required'
-                                      : null,
+                                  validator: (value) {
+                                    final capacity = int.tryParse(
+                                      value?.trim() ?? '',
+                                    );
+                                    if (capacity == null ||
+                                        capacity < 0 ||
+                                        capacity > 1000000) {
+                                      return 'Enter a whole number from 0 to 1,000,000';
+                                    }
+                                    return null;
+                                  },
                                 ),
                               ],
                             );
@@ -252,6 +282,12 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
                                       size: 18,
                                     ),
                                   ),
+                                  validator: (value) =>
+                                      value == null ||
+                                          value.trim().isEmpty ||
+                                          value.length > 100
+                                      ? 'Enter a date up to 100 characters'
+                                      : null,
                                 ),
                               ],
                             );
@@ -276,6 +312,12 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
                                       size: 18,
                                     ),
                                   ),
+                                  validator: (value) =>
+                                      value == null ||
+                                          value.trim().isEmpty ||
+                                          value.length > 80
+                                      ? 'Enter a time up to 80 characters'
+                                      : null,
                                 ),
                               ],
                             );
@@ -318,6 +360,8 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
                           ),
                           validator: (v) => v == null || v.isEmpty
                               ? 'Location is required'
+                              : v.trim().length > 240
+                              ? 'Location must be 240 characters or fewer'
                               : null,
                         ),
                         const SizedBox(height: 14),
@@ -346,6 +390,7 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
                         TextFormField(
                           controller: _descController,
                           maxLines: 3,
+                          maxLength: 5000,
                           decoration: const InputDecoration(
                             hintText: 'Describe the key highlights, target audience, agenda...',
                           ),
@@ -355,18 +400,30 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
                   ),
                 ),
                 const SizedBox(height: 20),
+                if (_saveError != null) ...[
+                  Text(_saveError!, style: TextStyle(color: AppTheme.danger)),
+                  const SizedBox(height: 12),
+                ],
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: _saving
+                          ? null
+                          : () => Navigator.of(context).pop(),
                       child: const Text('Cancel'),
                     ),
                     const SizedBox(width: 12),
                     ElevatedButton.icon(
-                      onPressed: _submit,
-                      icon: const Icon(Icons.check, size: 18),
-                      label: const Text('Publish Event'),
+                      onPressed: _saving ? null : _submit,
+                      icon: _saving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.check, size: 18),
+                      label: Text(_saving ? 'Saving...' : 'Save Draft'),
                     ),
                   ],
                 ),

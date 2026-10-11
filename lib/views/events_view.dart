@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/event_model.dart';
 import '../services/firestore_service.dart';
+import '../services/firestore_error_message.dart';
 import '../theme/app_theme.dart';
 import 'create_event_dialog.dart';
 import 'event_details_view.dart';
@@ -11,7 +12,7 @@ class EventsView extends StatefulWidget {
   final List<AttendeeItem> attendees;
   final List<ScheduleItem> schedules;
   final List<AnnouncementItem> announcements;
-  final Function(EventItem) onEventCreated;
+  final Future<void> Function(EventItem) onEventCreated;
   final Function(AttendeeItem) onAttendeeRegistered;
   final Function(AttendeeItem) onAttendeeCheckInToggled;
   final VoidCallback onDataChanged;
@@ -57,7 +58,11 @@ class _EventsViewState extends State<EventsView> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not update publication: $error')),
+        SnackBar(
+          content: Text(
+            firestoreErrorMessage(error, 'update event publication'),
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => _publishingEventIds.remove(event.id));
@@ -105,9 +110,9 @@ class _EventsViewState extends State<EventsView> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Could not confirm deletion of "${event.title}". Related records '
-            'may have been partially deleted; verify Firestore before retrying. '
-            'Details: $error',
+            '${firestoreErrorMessage(error, 'delete "${event.title}"')}. '
+            'Related records may have been partially deleted; verify Firestore '
+            'before retrying.',
           ),
         ),
       );

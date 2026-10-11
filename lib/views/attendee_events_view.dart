@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/event_model.dart';
+import '../services/firestore_error_message.dart';
 import '../services/firestore_service.dart';
 import '../theme/app_theme.dart';
 
@@ -260,8 +261,13 @@ class _AttendeeEventDetailsViewState extends State<AttendeeEventDetailsView> {
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Registration failed: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            firestoreErrorMessage(error, 'register for this event'),
+          ),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -296,7 +302,11 @@ class _AttendeeEventDetailsViewState extends State<AttendeeEventDetailsView> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not cancel registration: $error')),
+        SnackBar(
+          content: Text(
+            firestoreErrorMessage(error, 'cancel this registration'),
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => _isSaving = false);

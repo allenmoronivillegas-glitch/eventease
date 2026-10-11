@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/event_model.dart';
+import '../services/firestore_error_message.dart';
 import '../theme/app_theme.dart';
 import '../services/firestore_service.dart';
 
@@ -195,7 +196,11 @@ class _ScheduleViewState extends State<ScheduleView> {
                     if (!context.mounted) return;
 
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to save schedule: $e')),
+                      SnackBar(
+                        content: Text(
+                          firestoreErrorMessage(e, 'save this schedule'),
+                        ),
+                      ),
                     );
                   }
                 }
@@ -246,7 +251,11 @@ class _ScheduleViewState extends State<ScheduleView> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not delete schedule session: $error')),
+        SnackBar(
+          content: Text(
+            firestoreErrorMessage(error, 'delete this schedule session'),
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => _deletingScheduleIds.remove(schedule.id));

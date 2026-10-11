@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/event_model.dart';
+import '../services/firestore_error_message.dart';
 import '../services/firestore_service.dart';
 import '../theme/app_theme.dart';
 import 'send_announcement_dialog.dart';
@@ -63,7 +64,11 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not delete announcement: $error')),
+        SnackBar(
+          content: Text(
+            firestoreErrorMessage(error, 'delete this announcement'),
+          ),
+        ),
       );
     } finally {
       if (mounted) {

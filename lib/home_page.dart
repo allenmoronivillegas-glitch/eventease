@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'models/event_model.dart';
+import 'services/firestore_error_message.dart';
 import 'services/user_profile_service.dart';
 import 'theme/app_theme.dart';
 import 'views/announcements_view.dart';
@@ -93,7 +94,10 @@ class _HomePageState extends State<HomePage> {
             }
             setState(() {
               _profileLoading = false;
-              _profileError = 'Could not load your account role. Check your connection and retry.';
+              _profileError = firestoreErrorMessage(
+                error,
+                'load your account role',
+              );
             });
           },
         );
@@ -156,7 +160,10 @@ class _HomePageState extends State<HomePage> {
           debugPrint('[HomePage] $source stream failed (${error.runtimeType})');
           setState(() {
             _loadedDataSources.add(source);
-            _dataErrors[source] = 'Could not load ${source.toLowerCase()}.';
+            _dataErrors[source] = firestoreErrorMessage(
+              error,
+              'load ${source.toLowerCase()}',
+            );
           });
         },
       ),
@@ -200,22 +207,8 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  Future<void> _onEventCreated(EventItem event) async {
-    try {
-      await _firestoreService.createEvent(event);
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Event saved to Firebase successfully!')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Failed to save event: $e')));
-    }
-  }
+  Future<void> _onEventCreated(EventItem event) =>
+      _firestoreService.createEvent(event);
 
   Future<void> _onAttendeeRegistered(AttendeeItem attendee) async {
     try {
@@ -231,8 +224,9 @@ class _HomePageState extends State<HomePage> {
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Failed to save attendee: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(firestoreErrorMessage(e, 'save this attendee'))),
+      );
     }
   }
 
@@ -251,7 +245,9 @@ class _HomePageState extends State<HomePage> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save announcement: $e')),
+        SnackBar(
+          content: Text(firestoreErrorMessage(e, 'save this announcement')),
+        ),
       );
     }
   }
@@ -276,9 +272,11 @@ class _HomePageState extends State<HomePage> {
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to update check-in: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(firestoreErrorMessage(e, 'update the check-in')),
+        ),
+      );
     }
   }
 

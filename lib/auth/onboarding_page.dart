@@ -171,6 +171,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
     if (error is FirebaseException) {
       switch (error.code) {
         case 'permission-denied':
+          if (_role == 'organizer') {
+            return 'Organizer access must be provisioned by an administrator. '
+                'Contact your EventEase administrator to enable this account.';
+          }
           return 'Firestore denied permission to save your profile. Check your account permissions or contact support.';
         case 'unauthenticated':
         case 'user-mismatch':
@@ -358,7 +362,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
         _roleCard(
           value: 'organizer',
           title: 'Event Organizer',
-          description: 'Create and manage events, schedules, and attendees.',
+          description:
+              'Create and manage events, schedules, and attendees. Organizer '
+              'access must be provisioned by an EventEase administrator.',
           icon: Icons.event_available_rounded,
           details: const [
             'Organize schedules and announcements',

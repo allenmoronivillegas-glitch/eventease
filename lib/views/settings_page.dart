@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../services/firestore_error_message.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_controller.dart';
@@ -74,6 +75,10 @@ class _SettingsPageState extends State<SettingsPage> {
       if (mounted) _toast('Profile updated');
     } on FirebaseAuthException catch (e) {
       if (mounted) _toast(e.message ?? 'Could not update profile.');
+    } on FirebaseException catch (error) {
+      if (mounted) {
+        _toast(firestoreErrorMessage(error, 'update your profile'));
+      }
     } finally {
       if (mounted) setState(() => _savingName = false);
     }
@@ -145,10 +150,7 @@ class _SettingsPageState extends State<SettingsPage> {
       if (mounted) _toast(error.message?.toString() ?? 'Invalid image.');
     } on FirebaseException catch (error) {
       if (!mounted) return;
-      final message = error.code == 'unauthorized'
-          ? 'You do not have permission to upload this photo.'
-          : error.message ?? 'Could not upload the profile photo.';
-      _toast(message);
+      _toast(firestoreErrorMessage(error, 'upload your profile photo'));
     } finally {
       if (mounted) setState(() => _uploadingPhoto = false);
     }
@@ -160,7 +162,7 @@ class _SettingsPageState extends State<SettingsPage> {
           .setAppearance(themeMode: mode, accentId: accentId);
     } on FirebaseException catch (error) {
       if (mounted) {
-        _toast(error.message ?? 'Could not sync appearance preferences.');
+        _toast(firestoreErrorMessage(error, 'sync appearance preferences'));
       }
     }
   }
