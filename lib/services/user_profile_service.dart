@@ -123,7 +123,7 @@ class UserProfileService {
         // Do not block ordinary attendees from signing in.
         debugPrint(
           '[UserProfileService] Organizer promotion not approved '
-          '(code=\${error.code})',
+          '(code=${error.code})',
         );
         return;
       }
