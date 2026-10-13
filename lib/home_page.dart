@@ -280,6 +280,18 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _signOutToLogin() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      // AuthGate listens to Firebase Auth and returns to Login / Sign Up.
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message ?? 'Could not log out. Please try again.')),
+      );
+    }
+  }
+
   void _openSettings() {
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const SettingsPage()));
@@ -427,6 +439,11 @@ class _HomePageState extends State<HomePage> {
                   tooltip: 'Settings',
                   onPressed: _openSettings,
                 ),
+                IconButton(
+                  icon: const Icon(Icons.logout_rounded),
+                  tooltip: 'Log out and return to Login / Sign Up',
+                  onPressed: _signOutToLogin,
+                ),
               ],
             ),
             body: SafeArea(child: _withDataStatus(pages[_selectedIndex])),
@@ -555,6 +572,11 @@ class _HomePageState extends State<HomePage> {
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Settings',
             onPressed: _openSettings,
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout_rounded),
+            tooltip: 'Log out and return to Login / Sign Up',
+            onPressed: _signOutToLogin,
           ),
         ],
       ),
@@ -878,6 +900,14 @@ class _HomePageState extends State<HomePage> {
                 ),
                 tooltip: 'Settings',
                 onPressed: _openSettings,
+              ),
+              IconButton(
+                icon: Icon(
+                  Icons.logout_rounded,
+                  color: AppTheme.textSecondary,
+                ),
+                tooltip: 'Log out and return to Login / Sign Up',
+                onPressed: _signOutToLogin,
               ),
               const SizedBox(width: 8),
               Stack(
