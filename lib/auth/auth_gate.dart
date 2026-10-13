@@ -93,11 +93,18 @@ class _AuthenticatedUserGateState extends State<_AuthenticatedUserGate> {
           .hasCompletedOnboarding(widget.user.uid)
           .timeout(_profileCheckTimeout);
       if (completed) {
-        // If an administrator has approved this verified email, synchronize
-        // the existing profile's role before choosing the user's home screen.
-        await widget.profileService
-            .syncApprovedOrganizerRole(widget.user.uid)
-            .timeout(_profileCheckTimeout);
+        // Try to synchronize an approved organizer profile, but never block
+        // sign-in for ordinary attendees if this optional check fails.
+        try {
+          await widget.profileService
+              .syncApprovedOrganizerRole(widget.user.uid)
+              .timeout(_profileCheckTimeout);
+        } catch (error) {
+          debugPrint(
+            '[AuthGate] Organizer approval sync skipped '
+            '(\${error.runtimeType})',
+          );
+        }
       }
       return completed;
     } on TimeoutException {
