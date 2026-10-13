@@ -61,6 +61,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   bool _reminders = true;
   bool _saving = false;
   bool _saved = false;
+  bool _verificationEmailSent = false;
   String? _saveError;
 
   @override
@@ -115,6 +116,49 @@ class _OnboardingPageState extends State<OnboardingPage> {
     });
 
     try {
+      if (role == 'organizer') {
+        final auth = FirebaseAuth.instance;
+        var currentUser = auth.currentUser;
+        if (currentUser == null || currentUser.uid != widget.user.uid) {
+          throw FirebaseAuthException(
+            code: 'user-mismatch',
+            message: 'The signed-in account changed. Please sign in again.',
+          );
+        }
+
+        await currentUser.reload();
+        currentUser = auth.currentUser;
+
+        final needsEmailVerification = currentUser != null &&
+            currentUser.providerData.any(
+              (provider) => provider.providerId == 'password',
+            ) &&
+            !currentUser.emailVerified;
+
+        if (needsEmailVerification) {
+          if (!_verificationEmailSent) {
+            await currentUser.sendEmailVerification();
+            _verificationEmailSent = true;
+          }
+          if (!mounted) return;
+          setState(() {
+            _saving = false;
+            _saveError =
+                'Organizer access requires a verified email. We sent a '
+                'verification link to \${currentUser.email ?? 'your email'}. '
+                'Open that link, return here, then tap Finish again. Your '
+                'email must also be approved by the EventEase administrator.';
+          });
+          return;
+        }
+
+        // Refresh the token so Firestore rules receive the current
+        // email_verified claim after email verification.
+        if (currentUser != null) {
+          await currentUser.getIdToken(true);
+        }
+      }
+
       await _profileService
           .saveOnboardingProfile(
             uid: widget.user.uid,
@@ -172,8 +216,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
       switch (error.code) {
         case 'permission-denied':
           if (_role == 'organizer') {
-            return 'Organizer access must be provisioned by an administrator. '
-                'Contact your EventEase administrator to enable this account.';
+            return 'Organizer access could not be activated. Verify your email '
+                'and ask the EventEase administrator to approve this exact '
+                'email in the approved_organizers list, then try again.';
           }
           return 'Firestore denied permission to save your profile. Check your account permissions or contact support.';
         case 'unauthenticated':
