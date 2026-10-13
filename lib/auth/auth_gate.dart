@@ -102,7 +102,7 @@ class _AuthenticatedUserGateState extends State<_AuthenticatedUserGate> {
         } catch (error) {
           debugPrint(
             '[AuthGate] Organizer approval sync skipped '
-            '(\${error.runtimeType})',
+            '(${error.runtimeType})',
           );
         }
       }
