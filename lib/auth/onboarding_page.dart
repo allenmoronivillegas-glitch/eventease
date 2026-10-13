@@ -406,8 +406,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
           value: 'organizer',
           title: 'Event Organizer',
           description:
-              'Create and manage events, schedules, and attendees. Organizer '
-              'access must be provisioned by an EventEase administrator.',
+              'Create and manage events, schedules, and attendees. Access is '
+              'enabled automatically only for administrator-approved, verified emails.',
           icon: Icons.event_available_rounded,
           details: const [
             'Organize schedules and announcements',
