@@ -89,9 +89,17 @@ class _AuthenticatedUserGateState extends State<_AuthenticatedUserGate> {
 
   Future<bool> _checkProfile() async {
     try {
-      return await widget.profileService
+      final completed = await widget.profileService
           .hasCompletedOnboarding(widget.user.uid)
           .timeout(_profileCheckTimeout);
+      if (completed) {
+        // If an administrator has approved this verified email, synchronize
+        // the existing profile's role before choosing the user's home screen.
+        await widget.profileService
+            .syncApprovedOrganizerRole(widget.user.uid)
+            .timeout(_profileCheckTimeout);
+      }
+      return completed;
     } on TimeoutException {
       debugPrint(
         '[AuthGate] Profile check timed out '
