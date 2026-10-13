@@ -437,6 +437,19 @@ class _OnboardingPageState extends State<OnboardingPage> {
     required List<String> details,
   }) {
     final selected = _role == value;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = selected
+        ? (isDark ? AppTheme.primaryDark : AppTheme.primaryLight)
+        : AppTheme.surface;
+    final foregroundColor = selected && isDark
+        ? Colors.white
+        : AppTheme.textPrimary;
+    final secondaryForegroundColor = selected && isDark
+        ? Colors.white.withValues(alpha: 0.92)
+        : AppTheme.textSecondary;
+    final selectionColor = selected && isDark
+        ? Colors.white
+        : AppTheme.primary;
     return Semantics(
       button: true,
       selected: selected,
@@ -451,7 +464,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
           duration: const Duration(milliseconds: 160),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: selected ? AppTheme.primaryLight : Colors.white,
+            color: cardColor,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: selected ? AppTheme.primary : AppTheme.cardBorder,
@@ -466,7 +479,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: selected ? Colors.white : AppTheme.background,
+                      color: selected && !isDark
+                          ? Colors.white
+                          : AppTheme.background,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(icon, color: AppTheme.primary, size: 23),
@@ -476,7 +491,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     child: Text(
                       title,
                       style: TextStyle(
-                        color: AppTheme.textPrimary,
+                        color: foregroundColor,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -486,14 +501,17 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     selected
                         ? Icons.radio_button_checked_rounded
                         : Icons.radio_button_off_rounded,
-                    color: selected ? AppTheme.primary : AppTheme.textMuted,
+                    color: selected ? selectionColor : AppTheme.textMuted,
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               Text(
                 description,
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                style: TextStyle(
+                  color: secondaryForegroundColor,
+                  fontSize: 13,
+                ),
               ),
               const SizedBox(height: 10),
               ...details.map(
@@ -504,14 +522,16 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       Icon(
                         Icons.check_rounded,
                         size: 16,
-                        color: AppTheme.primary,
+                        color: selected && isDark
+                            ? Colors.white
+                            : AppTheme.primary,
                       ),
                       const SizedBox(width: 7),
                       Expanded(
                         child: Text(
                           detail,
                           style: TextStyle(
-                            color: AppTheme.textSecondary,
+                            color: secondaryForegroundColor,
                             fontSize: 12,
                           ),
                         ),
