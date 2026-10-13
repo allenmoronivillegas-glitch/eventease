@@ -129,13 +129,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
         await currentUser.reload();
         currentUser = auth.currentUser;
 
-        final needsEmailVerification = currentUser != null &&
+        if (currentUser != null &&
             currentUser.providerData.any(
               (provider) => provider.providerId == 'password',
             ) &&
-            !currentUser.emailVerified;
-
-        if (needsEmailVerification) {
+            !currentUser.emailVerified) {
           if (!_verificationEmailSent) {
             await currentUser.sendEmailVerification();
             _verificationEmailSent = true;
@@ -145,7 +143,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             _saving = false;
             _saveError =
                 'Organizer access requires a verified email. We sent a '
-                'verification link to \${currentUser.email ?? 'your email'}. '
+                'verification link to ${currentUser.email ?? 'your email'}. '
                 'Open that link, return here, then tap Finish again. Your '
                 'email must also be approved by the EventEase administrator.';
           });
