@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models/event_model.dart';
@@ -17,11 +19,61 @@ class AttendeeEventsView extends StatefulWidget {
 class _AttendeeEventsViewState extends State<AttendeeEventsView> {
   late Stream<List<EventItem>> _eventsStream;
   late Stream<Set<String>> _registrationIdsStream;
+  StreamSubscription<List<EventItem>>? _newEventsSubscription;
+  Set<String>? _knownEventIds;
 
   @override
   void initState() {
     super.initState();
     _refreshStreams();
+    _watchForNewEvents();
+  }
+
+  void _watchForNewEvents() {
+    _newEventsSubscription?.cancel();
+    _newEventsSubscription = _eventsStream.listen((events) {
+      final currentIds = events.map((event) => event.id).toSet();
+      final previousIds = _knownEventIds;
+      _knownEventIds = currentIds;
+      // The first snapshot establishes a baseline and should not notify users
+      // about events that were already published before they opened this page.
+      if (previousIds == null || !mounted) return;
+      final newlyPublished = events.where(
+        (event) => !previousIds.contains(event.id),
+      ).toList();
+      if (newlyPublished.isEmpty) return;
+      final event = newlyPublished.first;
+      final extraCount = newlyPublished.length - 1;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 5),
+            content: Row(
+              children: [
+                const Icon(Icons.notifications_active_outlined, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    extraCount == 0
+                        ? 'New event: ${event.title}'
+                        : '${newlyPublished.length} new events are available, including ${event.title}.',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+    }, onError: (Object error, StackTrace stackTrace) {
+      debugPrint('[AttendeeEventsView] New-event listener failed (${error.runtimeType})');
+    });
+  }
+
+  @override
+  void dispose() {
+    _newEventsSubscription?.cancel();
+    super.dispose();
   }
 
   void _refreshStreams() {
