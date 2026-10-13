@@ -51,6 +51,18 @@ service cloud.firestore {
           == 'attendee';
     }
 
+    // Organizer privileges can only be granted to an email explicitly approved
+    // by a trusted project administrator. Email must be verified.
+    function isApprovedOrganizerEmail() {
+      return isAuthenticated() &&
+        ('email' in request.auth.token) &&
+        request.auth.token.email is string &&
+        ('email_verified' in request.auth.token) &&
+        request.auth.token.email_verified == true &&
+        exists(/databases/$(database)/documents/approved_organizers/$(request.auth.token.email)) &&
+        get(/databases/$(database)/documents/approved_organizers/$(request.auth.token.email)).data.approved == true;
+    }
+
     function hasRequiredFields(data, fields) {
       return data.keys().hasAll(fields);
     }
@@ -239,15 +251,26 @@ service cloud.firestore {
         data.registeredAt == request.time;
     }
 
+    // Approval records can only be managed by trusted administrators in the
+    // Firebase Console/Admin SDK. Client apps cannot read or modify this list.
+    match /approved_organizers/{email} {
+      allow read, write: if false;
+    }
+
     match /users/{uid} {
       allow read: if isOwner(uid);
       allow create: if isOwner(uid) &&
         isValidUser(request.resource.data, uid) &&
-        request.resource.data.role == 'attendee';
+        (request.resource.data.role == 'attendee' ||
+          (request.resource.data.role == 'organizer' &&
+            isApprovedOrganizerEmail()));
       allow update: if isOwner(uid) &&
         isValidUser(request.resource.data, uid) &&
         uidNotModified(request.resource.data) &&
-        request.resource.data.role == resource.data.role &&
+        (request.resource.data.role == resource.data.role ||
+          (resource.data.role == 'attendee' &&
+            request.resource.data.role == 'organizer' &&
+            isApprovedOrganizerEmail())) &&
         (!('createdAt' in resource.data) ||
           request.resource.data.createdAt == resource.data.createdAt);
       allow delete: if false;
