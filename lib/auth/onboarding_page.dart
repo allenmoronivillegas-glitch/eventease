@@ -100,6 +100,23 @@ class _OnboardingPageState extends State<OnboardingPage> {
     });
   }
 
+  Future<void> _handleBackNavigation() async {
+    if (_saving) return;
+    if (_step > 0) {
+      _back();
+      return;
+    }
+    // On the first onboarding step, return to Login / Sign Up by signing out.
+    try {
+      await FirebaseAuth.instance.signOut();
+    } on FirebaseAuthException catch (error) {
+      if (mounted) {
+        _showMessage(error.message ?? 'Could not return to Login. Please try again.');
+      }
+    }
+  }
+
+
   void _showMessage(String message) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
@@ -286,6 +303,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
   Widget _brandHeader() {
     return Row(
       children: [
+        IconButton(
+          tooltip: _step == 0 ? 'Back to Login / Sign Up' : 'Previous step',
+          onPressed: _saving ? null : _handleBackNavigation,
+          icon: const Icon(Icons.arrow_back_rounded),
+        ),
+        const SizedBox(width: 4),
         Container(
           padding: const EdgeInsets.all(9),
           decoration: BoxDecoration(
