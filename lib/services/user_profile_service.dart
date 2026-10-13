@@ -94,6 +94,43 @@ class UserProfileService {
     }
   }
 
+  /// Promotes an already-onboarded attendee only when Firestore rules confirm
+  /// the signed-in, verified email is on the administrator-managed allowlist.
+  ///
+  /// A permission-denied response simply means this user is not approved.
+  Future<void> syncApprovedOrganizerRole(String uid) async {
+    _requireMatchingAuthenticatedUser(uid, 'syncApprovedOrganizerRole');
+
+    final user = _auth.currentUser;
+    if (user == null || user.email == null || !user.emailVerified) return;
+
+    final userRef = _firestore.collection('users').doc(uid);
+    final snapshot = await userRef.get();
+    final profile = snapshot.data();
+    if (!snapshot.exists || profile == null || profile['role'] != 'attendee') {
+      return;
+    }
+
+    try {
+      await userRef.update({
+        'role': 'organizer',
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      debugPrint('[UserProfileService] Approved organizer role synchronized');
+    } on FirebaseException catch (error) {
+      if (error.code == 'permission-denied') {
+        // Not on the admin-managed allowlist (or otherwise not eligible).
+        // Do not block ordinary attendees from signing in.
+        debugPrint(
+          '[UserProfileService] Organizer promotion not approved '
+          '(code=\${error.code})',
+        );
+        return;
+      }
+      rethrow;
+    }
+  }
+
   Future<void> saveAppearancePreferences({
     required String uid,
     required String themeMode,
